@@ -35,7 +35,7 @@ export async function listTools(): Promise<WebMCP.RegisteredTool[]> {
 }
 
 type ExecuteToolFn = (
-  name: string,
+  tool: WebMCP.RegisteredTool,
   json: string,
   options?: { signal?: AbortSignal },
 ) => Promise<unknown>;
@@ -59,5 +59,15 @@ export async function executeTool(
       "document.modelContext.executeTool is unavailable in this browser.",
     );
   }
-  return (fn as ExecuteToolFn).call(mc, name, json, options);
+  // Chrome requires the RegisteredTool object from getTools(); a bare name is rejected with
+  // "The provided value is not of type RegisteredTool".
+  const tools = await mc.getTools();
+  const tool = tools.find((t) => t.name === name);
+  if (!tool) {
+    throw new NextWebMCPError(
+      "MODEL_CONTEXT_UNAVAILABLE",
+      `No registered tool named "${name}". Call getTools() to see what is available.`,
+    );
+  }
+  return (fn as ExecuteToolFn).call(mc, tool, json, options);
 }

@@ -46,10 +46,12 @@ export class FakeModelContext extends EventTarget {
   }
 
   async executeTool(
-    name: string,
+    ref: string | { name: string },
     json: string,
     options?: { signal?: AbortSignal },
   ): Promise<unknown> {
+    // Chrome accepts only the RegisteredTool object; the fake also accepts a name for convenience.
+    const name = typeof ref === "string" ? ref : ref.name;
     const tool = this.tools.get(name);
     if (!tool) throw new Error(`No tool named "${name}"`);
     const signal = options?.signal ?? new AbortController().signal;

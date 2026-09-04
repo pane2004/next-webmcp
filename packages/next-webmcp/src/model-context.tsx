@@ -203,8 +203,13 @@ export function ModelContext({ tools, children }: ModelContextProps): React.JSX.
         name,
         description: def.description,
         inputSchema,
-        execute: (raw, { signal: execSignal }) => {
-          const signal = anySignal([execSignal, controller.signal]);
+        // Chrome 150 calls execute(input) with a single argument (no options object), so the
+        // per-call signal is optional in practice even though the spec always provides it.
+        execute: (raw, options?: { signal?: AbortSignal }) => {
+          const execSignal = options?.signal;
+          const signal = anySignal(
+            execSignal ? [execSignal, controller.signal] : [controller.signal],
+          );
           return runTool({ def, name, route, raw, signal, ctx: buildContext(signal) });
         },
       };
