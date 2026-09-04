@@ -33,18 +33,18 @@ jobs:
         run: pnpm install --frozen-lockfile=false
 
       - name: Lint (prettier)
-        run: pnpm format:check
+        run: pnpm lint
 
       - name: Build library
         run: pnpm build
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: pnpm typecheck && pnpm typecheck:examples
 
       - name: Test
         run: pnpm test
 
-      - name: Build apps/commerce (mock mode, no env)
-        run: pnpm --filter commerce build
+      - name: Build examples/commerce (mock mode, no env)
+        run: pnpm --filter example-commerce build
         env:
           NEXT_TELEMETRY_DISABLED: "1"

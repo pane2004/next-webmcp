@@ -17,6 +17,7 @@ A repo or a `tools.ts` + layout snippet. `examples/minimal` is a good starting p
 **Environment**
 
 - next-webmcp version:
+- Entry point (`next-webmcp`, `/form`, `/manifest`, `/devtools`):
 - next version:
 - react version:
 - zod version:

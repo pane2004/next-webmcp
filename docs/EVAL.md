@@ -8,7 +8,7 @@ the run log below.
 
 | Condition | Description                                                                                                                                                                       |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A**     | WebMCP on: Chrome 149+ with the origin trial (or `chrome://flags/#enable-webmcp-testing`), tools registered by `apps/commerce`.                                                   |
+| **A**     | WebMCP on: Chrome 149+ with the origin trial (or `chrome://flags/#enable-webmcp-testing`), tools registered by `examples/commerce`.                                               |
 | **B**     | WebMCP off: same site, same agent, `document.modelContext` absent (flag off, non-trial origin, or `localhost` without the flag). The agent uses page text, clicks and forms only. |
 
 Same model, same system prompt, same starting state (empty cart, home page) for every run. Mock provider, so

@@ -4,5 +4,4 @@ dist
 pnpm-lock.yaml
 CHANGELOG.md
 tsconfig.tsbuildinfo
-**/public/.well-known/webmcp.json
-apps/commerce/lib/shopify/storefront.ts
+examples/commerce/lib/shopify/storefront.ts

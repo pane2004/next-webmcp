@@ -1,14 +1,13 @@
 ---
 name: next-webmcp-adoption
-description: Adopt next-webmcp in an existing Next.js App Router app. Inventories server actions, picks a tool strategy per route, generates tools.ts files, mounts <ModelContext>, and verifies in Chrome. Use when asked to "make this app agent-ready", "add WebMCP tools", or "expose server actions to agents".
+description: Adopt next-webmcp in an existing Next.js App Router app. Inventories server actions, picks a tool strategy per route, generates tools.ts files, mounts <ModelContext>, adds the manifest route, and verifies in Chrome. Use when asked to "make this app agent-ready", "add WebMCP tools", or "expose server actions to agents".
 ---
 
 # Adopt next-webmcp in an existing App Router app
 
 You are turning an existing Next.js App Router app into one that exposes route-scoped WebMCP tools. Work in
 small, verifiable steps and keep the app's current UI untouched. The public API is documented in
-`node_modules/next-webmcp/README.md` (or `packages/next-webmcp/README.md` in the monorepo); use only exports
-listed there.
+`node_modules/next-webmcp/README.md` and, in the monorepo, `docs/api.md`; use only exports listed there.
 
 ## Step 0 — Preconditions
 
@@ -94,30 +93,51 @@ export function ProductTools({ children }: { children: React.ReactNode }) {
 }
 ```
 
-Wrap the segment's children in `layout.tsx` or `page.tsx` with it. In the root layout wrapper also render
-`<ToolConfirmations />` (required for `confirm`) and `<WebMCPDevTools />` (renders `null` in production).
+Wrap the segment's children in `layout.tsx` or `page.tsx` with it. The outermost `<ModelContext>` (usually
+the root layout's wrapper) renders the approval card by itself; do not add `<ToolConfirmations />` unless you
+pass `confirmations={false}` and want to place the card yourself. In that root wrapper also render
+`<WebMCPDevTools />` from `next-webmcp/devtools` (it renders `null` in production).
 
 For declarative forms, replace `import Form from "next/form"` with `import Form from "next-webmcp/form"` and
-add `toolname` and `tooldescription`; give inputs a `toolparamdescription` via spread:
-`{...{ toolparamdescription: "…" }}`.
+add `toolname` and `tooldescription`; give inputs a `toolparamdescription="…"` attribute. The JSX typings
+for these attributes ship with `next-webmcp/form`, so remove any `declare module "react"` augmentation or
+spread cast the app previously needed. `action` accepts a server action that returns data; map its result
+with `respond`.
 
-Optional: wrap `next.config.ts` with `withWebMCP(config, { manifest: { routes: [...] } })` to write
-`public/.well-known/webmcp.json`.
+## Step 5 — Add the manifest route
 
-## Step 5 — Verify in Chrome
+Create `app/.well-known/webmcp.json/route.ts` from the same tool arrays:
 
-1. `pnpm dev`, open the app in Chrome 149+ with `chrome://flags/#enable-webmcp-testing` enabled.
+```ts
+import { createManifestHandler } from "next-webmcp/manifest";
+import { rootTools } from "@/app/tools";
+import { productTools } from "@/app/product/[handle]/tools";
+
+export const GET = createManifestHandler({
+  "/": rootTools,
+  "/product/[handle]": productTools,
+});
+```
+
+Pass an async function instead of the object when a route's tools depend on data. Do not write the manifest
+to `public/`.
+
+## Step 6 — Verify in Chrome
+
+1. Start the dev server, open the app in Chrome 149+ with `chrome://flags/#enable-webmcp-testing` enabled.
 2. Open the DevTools panel (bottom corner) or the Model Context Tool Inspector extension.
 3. Confirm: the root tools are listed on `/`; segment tools appear when you navigate into the segment and
    disappear when you leave; each tool's JSON Schema matches the Zod schema.
 4. In the Run tab call each tool with valid and invalid JSON. Invalid input must return
    `Invalid input for <name>: …`; a consequential tool must show the approval card; Escape must return
-   `User declined <name>.`
-5. Check the console: no `[next-webmcp]` warnings other than an expected `MODEL_CONTEXT_UNAVAILABLE` info in
+   `User declined <name>.` A `CONFIRM_NO_RENDERER` failure means the card is not mounted — see Step 4.
+5. `curl http://localhost:3000/.well-known/webmcp.json` returns `{ "version": 1, "routes": [...] }` with every
+   tool you defined.
+6. Check the console: no `[next-webmcp]` warnings other than an expected `MODEL_CONTEXT_UNAVAILABLE` info in
    browsers without WebMCP.
-6. Run `pnpm build` to make sure static pages still prerender (watch for `useSearchParams` Suspense warnings).
+7. Run `pnpm build` to make sure static pages still prerender.
 
-## Step 6 — Report
+## Step 7 — Report
 
 Summarize: routes touched, tools added (name, kind, confirm?), files created, and anything you could not
 verify (for example if no WebMCP-capable browser was available). Do not claim tools work in Chrome unless you

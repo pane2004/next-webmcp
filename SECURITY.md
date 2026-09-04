@@ -25,6 +25,11 @@ the only integration point.
 - **Mark read-only tools.** `annotations.readOnlyHint: true` lets agents plan without asking for approval.
 - **Do not leak internals in errors.** The library returns `<name> failed: <message>` and never a stack trace;
   keep `message` free of secrets and internal identifiers.
+- **Keep the approval card mounted.** The outermost `<ModelContext>` renders it by default. If you pass
+  `confirmations={false}` without mounting `<ToolConfirmations />`, confirm-gated tools fail with
+  `CONFIRM_NO_RENDERER` rather than running unapproved.
+- **The manifest is public.** `/.well-known/webmcp.json` lists tool names, descriptions and input schemas
+  for anyone who requests it. Keep secrets and internal identifiers out of descriptions and schemas.
 - **Origin-trial tokens are public by design.** They only work on the registered origin. Committing one is
   fine; committing API keys is not.
 
