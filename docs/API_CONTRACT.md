@@ -38,55 +38,75 @@ export type ToolAnnotations = {
 };
 
 export type ConfirmRequest = {
-  title: string;                                   // e.g. "Start checkout"
-  description?: string;                            // one sentence
+  title: string; // e.g. "Start checkout"
+  description?: string; // one sentence
   details?: Array<{ label: string; value: string }>; // rendered as a small table
 };
 
 export type ToolContext = {
-  params: Record<string, string | string[]>;   // from useParams()
-  pathname: string;                            // from usePathname()
-  searchParams: URLSearchParams;               // from useSearchParams()
-  router: AppRouterInstance;                   // from useRouter() (next/navigation)
+  params: Record<string, string | string[]>; // from useParams()
+  pathname: string; // from usePathname()
+  searchParams: URLSearchParams; // from useSearchParams()
+  router: AppRouterInstance; // from useRouter() (next/navigation)
   confirm: (req: ConfirmRequest, signal?: AbortSignal) => Promise<boolean>;
 };
 
 export type ToolExecuteOptions = { signal: AbortSignal };
 
 export type ToolDef<TInput extends z.ZodTypeAny = z.ZodTypeAny> = {
-  readonly name?: string;          // defaults to the key when used in defineTools()
+  readonly name?: string; // defaults to the key when used in defineTools()
   readonly title?: string;
   readonly description: string;
-  readonly input: TInput;          // Zod schema → JSON Schema via z.toJSONSchema (Zod 4)
+  readonly input: TInput; // Zod schema → JSON Schema via z.toJSONSchema (Zod 4)
   readonly annotations?: ToolAnnotations;
   readonly confirm?: boolean | ((input: z.infer<TInput>, ctx: ToolContext) => ConfirmRequest);
-  readonly execute: (ctx: ToolContext) =>
-    (input: z.infer<TInput>, opts: ToolExecuteOptions) => Promise<string | object>;
+  readonly execute: (
+    ctx: ToolContext,
+  ) => (input: z.infer<TInput>, opts: ToolExecuteOptions) => Promise<string | object>;
 };
 
 export function tool<TInput extends z.ZodTypeAny>(def: ToolDef<TInput>): ToolDef<TInput>;
 export function defineTools(map: Record<string, ToolDef<any>>): ToolDef[]; // fills name from key if missing
 
-export function ModelContext(props: { tools: ToolDef[]; children?: React.ReactNode }): React.JSX.Element;
+export function ModelContext(props: {
+  tools: ToolDef[];
+  children?: React.ReactNode;
+}): React.JSX.Element;
 export function ToolConfirmations(): React.JSX.Element | null;
-export function useToolCalls(): ToolCallRecord[];         // newest first, max 200
+export function useToolCalls(): ToolCallRecord[]; // newest first, max 200
 export function useModelContextTools(): RegisteredToolInfo[]; // live getTools() + toolchange
 
 export type ToolCallRecord = {
-  id: string; name: string; route: string; args: unknown;
-  startedAt: number; durationMs: number; result: string; ok: boolean;
+  id: string;
+  name: string;
+  route: string;
+  args: unknown;
+  startedAt: number;
+  durationMs: number;
+  result: string;
+  ok: boolean;
 };
 export type RegisteredToolInfo = {
-  name: string; title?: string; description: string; inputSchema?: object;
-  annotations?: ToolAnnotations; route?: string; // route = pathname that registered it (from our registry; undefined for tools we did not register, e.g. declarative forms)
+  name: string;
+  title?: string;
+  description: string;
+  inputSchema?: object;
+  annotations?: ToolAnnotations;
+  route?: string; // route = pathname that registered it (from our registry; undefined for tools we did not register, e.g. declarative forms)
 };
 
 export class NextWebMCPError extends Error {
-  code: "TOOL_NAME_DUPLICATE" | "TOOL_NAME_INVALID" | "MODEL_CONTEXT_UNAVAILABLE" | "ZOD_TO_JSON_SCHEMA_UNSUPPORTED" | "CONFIRM_TIMEOUT";
+  code:
+    | "TOOL_NAME_DUPLICATE"
+    | "TOOL_NAME_INVALID"
+    | "MODEL_CONTEXT_UNAVAILABLE"
+    | "ZOD_TO_JSON_SCHEMA_UNSUPPORTED"
+    | "CONFIRM_TIMEOUT";
 }
 ```
 
 Execution semantics inside `ModelContext` (per tool, per mount):
+
 1. Parse raw input with `def.input.safeParse`. On failure return
    `Invalid input for <name>: <issue path>: <message>; ... Fix the arguments and call again.`
 2. If `confirm` is set: build a `ConfirmRequest` (boolean → `{ title: <title ?? name>, details: <args as label/value> }`),
@@ -97,6 +117,7 @@ Execution semantics inside `ModelContext` (per tool, per mount):
 6. Tools that navigate must compute and return their string first and call `router.push` in a microtask/after (documented; the app is responsible).
 
 Registration semantics:
+
 - One `AbortController` per `<ModelContext>` mount. Register on mount; abort on unmount. Re-register when `pathname` or serialized `params` change (so `ctx` is fresh).
 - Duplicate names across nested `ModelContext`s: dev `console.warn` once (`TOOL_NAME_DUPLICATE`); the later registration wins (Chrome replaces same-name tools).
 - No `document.modelContext`: `console.info` once (`[next-webmcp] document.modelContext is unavailable…`) and no-op. Never throw in render or effects.
@@ -118,6 +139,7 @@ export type ToolFormProps = FormProps & {
 };
 export default function Form(props: ToolFormProps): React.JSX.Element;
 ```
+
 Behavior: renders `next/form`'s `Form` with the WebMCP attributes spread onto the DOM element.
 `onSubmit` checks `(e.nativeEvent as any).agentInvoked`; if true → `e.preventDefault()`, run the `action` (function) with `new FormData(e.currentTarget)` and pass the promise (mapped through `respond`) to `e.nativeEvent.respondWith(...)`.
 If `action` is a string URL, fall back to native submit. Sets `data-tool-active` while `toolactivated` for this `toolname` until `toolcancel`/submit.
@@ -125,8 +147,12 @@ If `action` is a string URL, fall back to native submit. Sets `data-tool-active`
 ## `next-webmcp/devtools`
 
 ```ts
-export function WebMCPDevTools(props?: { position?: "bottom-right" | "bottom-left"; defaultOpen?: boolean }): React.JSX.Element | null;
+export function WebMCPDevTools(props?: {
+  position?: "bottom-right" | "bottom-left";
+  defaultOpen?: boolean;
+}): React.JSX.Element | null;
 ```
+
 `process.env.NODE_ENV === "production"` → returns null unless `props.force === true` (undocumented escape hatch for demos: `force?: boolean`).
 Panel: (a) Tools tab — live list from `getTools()` (refresh on `toolchange`), grouped by route (from registry; "declarative / other" otherwise), each with description + JSON schema toggle;
 (b) Run — pick a tool, JSON args textarea, "Run" calls `document.modelContext.executeTool(tool, json)` and shows the result (or "navigated (null)");
@@ -136,9 +162,16 @@ Inline styles / CSS variables only, no global CSS. Zero dependencies.
 ## `next-webmcp/config`
 
 ```ts
-export type WebMCPManifestRoute = { route: string; tools: Array<{ name: string; description: string; inputSchema?: object }> };
-export function withWebMCP<T extends object>(nextConfig: T, options?: { manifest?: { routes: WebMCPManifestRoute[]; outFile?: string } }): T;
+export type WebMCPManifestRoute = {
+  route: string;
+  tools: Array<{ name: string; description: string; inputSchema?: object }>;
+};
+export function withWebMCP<T extends object>(
+  nextConfig: T,
+  options?: { manifest?: { routes: WebMCPManifestRoute[]; outFile?: string } },
+): T;
 ```
+
 When `options.manifest` is provided, writes `public/.well-known/webmcp.json` at config-load time (sync `node:fs`). Returns the config untouched otherwise.
 Do NOT import `server-only` here (next.config is loaded in plain Node); just never import this from client code.
 

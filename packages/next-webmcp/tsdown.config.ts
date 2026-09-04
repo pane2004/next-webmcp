@@ -1,7 +1,10 @@
 import { defineConfig } from "tsdown";
 
-const CLIENT_ENTRIES = new Set(["index", "form", "devtools"]);
-
+/**
+ * Each client entry (`src/index.ts`, `src/form.tsx`, `src/devtools.tsx`) starts with a
+ * `"use client"` directive; rolldown hoists the entry module's directive to the top of the
+ * emitted chunk, so no banner is needed (a banner would duplicate it).
+ */
 export default defineConfig({
   entry: {
     index: "src/index.ts",
@@ -15,11 +18,17 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   clean: true,
-  external: ["react", "react-dom", "react/jsx-runtime", "next", "zod", /^next\//, "server-only", "node:fs", "node:path"],
-  outputOptions: {
-    banner: (chunk) => {
-      const base = chunk.fileName.replace(/\.(m?js|d\.m?ts)$/, "");
-      return CLIENT_ENTRIES.has(base) ? '"use client";' : "";
-    },
+  deps: {
+    neverBundle: [
+      "react",
+      "react-dom",
+      "react/jsx-runtime",
+      "next",
+      "zod",
+      /^next\//,
+      "server-only",
+      "node:fs",
+      "node:path",
+    ],
   },
 });

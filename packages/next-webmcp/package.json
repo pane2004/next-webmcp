@@ -5,14 +5,57 @@
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE"],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
-    "./form": { "types": "./dist/form.d.ts", "import": "./dist/form.js", "default": "./dist/form.js" },
-    "./devtools": { "types": "./dist/devtools.d.ts", "import": "./dist/devtools.js", "default": "./dist/devtools.js" },
-    "./config": { "types": "./dist/config.d.ts", "import": "./dist/config.js", "default": "./dist/config.js" },
-    "./internal": { "types": "./dist/internal.d.ts", "import": "./dist/internal.js", "default": "./dist/internal.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./form": {
+      "types": "./dist/form.d.ts",
+      "import": "./dist/form.js",
+      "default": "./dist/form.js"
+    },
+    "./devtools": {
+      "types": "./dist/devtools.d.ts",
+      "import": "./dist/devtools.js",
+      "default": "./dist/devtools.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js",
+      "default": "./dist/config.js"
+    },
+    "./internal": {
+      "types": "./dist/internal.d.ts",
+      "import": "./dist/internal.js",
+      "default": "./dist/internal.js"
+    },
     "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "form": [
+        "./dist/form.d.ts"
+      ],
+      "devtools": [
+        "./dist/devtools.d.ts"
+      ],
+      "config": [
+        "./dist/config.d.ts"
+      ],
+      "internal": [
+        "./dist/internal.d.ts"
+      ]
+    }
   },
   "scripts": {
     "build": "tsdown",
@@ -27,10 +70,12 @@
     "next": ">=15",
     "react": ">=19",
     "react-dom": ">=19",
-    "zod": ">=3.25"
+    "zod": "^4"
   },
   "peerDependenciesMeta": {
-    "zod": { "optional": false }
+    "zod": {
+      "optional": false
+    }
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.3",
@@ -47,9 +92,26 @@
     "webmcp-types": "^0.1.6",
     "zod": "^4.5.4"
   },
-  "engines": { "node": ">=20" },
-  "repository": { "type": "git", "url": "git+https://github.com/pane2004/next-webmcp.git", "directory": "packages/next-webmcp" },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pane2004/next-webmcp.git",
+    "directory": "packages/next-webmcp"
+  },
   "homepage": "https://github.com/pane2004/next-webmcp#readme",
-  "bugs": { "url": "https://github.com/pane2004/next-webmcp/issues" },
-  "keywords": ["webmcp", "nextjs", "next", "mcp", "agents", "server-actions", "model-context", "ai"]
+  "bugs": {
+    "url": "https://github.com/pane2004/next-webmcp/issues"
+  },
+  "keywords": [
+    "webmcp",
+    "nextjs",
+    "next",
+    "mcp",
+    "agents",
+    "server-actions",
+    "model-context",
+    "ai"
+  ]
 }

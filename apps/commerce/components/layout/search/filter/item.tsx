@@ -48,10 +48,7 @@ function SortFilterItem({ item }: { item: SortFilterItem }) {
   const DynamicTag = active ? "p" : Link;
 
   return (
-    <li
-      className="mt-2 flex text-sm text-black dark:text-white"
-      key={item.title}
-    >
+    <li className="mt-2 flex text-sm text-black dark:text-white" key={item.title}>
       <DynamicTag
         prefetch={!active ? false : undefined}
         href={href}
@@ -66,9 +63,5 @@ function SortFilterItem({ item }: { item: SortFilterItem }) {
 }
 
 export function FilterItem({ item }: { item: ListItem }) {
-  return "path" in item ? (
-    <PathFilterItem item={item} />
-  ) : (
-    <SortFilterItem item={item} />
-  );
+  return "path" in item ? <PathFilterItem item={item} /> : <SortFilterItem item={item} />;
 }

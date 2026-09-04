@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { ProductTools } from "./product-tools";
 
 export async function generateMetadata(props: {
   params: Promise<{ handle: string }>;
@@ -47,9 +48,7 @@ export async function generateMetadata(props: {
   };
 }
 
-export default async function ProductPage(props: {
-  params: Promise<{ handle: string }>;
-}) {
+export default async function ProductPage(props: { params: Promise<{ handle: string }> }) {
   const params = await props.params;
   const product = await getProduct(params.handle);
 
@@ -105,6 +104,7 @@ export default async function ProductPage(props: {
         </div>
         <RelatedProducts id={product.id} />
       </div>
+      <ProductTools product={product} />
       <Footer />
     </>
   );

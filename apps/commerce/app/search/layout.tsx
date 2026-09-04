@@ -2,14 +2,14 @@ import Footer from "components/layout/footer";
 import Collections from "components/layout/search/collections";
 import FilterList from "components/layout/search/filter";
 import { sorting } from "lib/constants";
+import { getCollections } from "lib/shopify";
 import ChildrenWrapper from "./children-wrapper";
+import { SearchTools } from "./search-tools";
 import { Suspense } from "react";
 
-export default function SearchLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function SearchLayout({ children }: { children: React.ReactNode }) {
+  const collections = await getCollections();
+
   return (
     <>
       <div className="mx-auto flex max-w-(--breakpoint-2xl) flex-col gap-8 px-4 pb-4 text-black md:flex-row dark:text-white">
@@ -25,6 +25,9 @@ export default function SearchLayout({
           <FilterList list={sorting} title="Sort by" />
         </div>
       </div>
+      <Suspense fallback={null}>
+        <SearchTools collections={collections} />
+      </Suspense>
       <Footer />
     </>
   );

@@ -1,13 +1,11 @@
+import { isMockCommerce } from "lib/mock/mode";
 import { ReadonlyURLSearchParams } from "next/navigation";
 
 export const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
   ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
   : "http://localhost:3000";
 
-export const createUrl = (
-  pathname: string,
-  params: URLSearchParams | ReadonlyURLSearchParams,
-) => {
+export const createUrl = (pathname: string, params: URLSearchParams | ReadonlyURLSearchParams) => {
   const paramsString = params.toString();
   const queryString = `${paramsString.length ? "?" : ""}${paramsString}`;
 
@@ -15,15 +13,23 @@ export const createUrl = (
 };
 
 export const ensureStartsWith = (stringToCheck: string, startsWith: string) =>
-  stringToCheck.startsWith(startsWith)
-    ? stringToCheck
-    : `${startsWith}${stringToCheck}`;
+  stringToCheck.startsWith(startsWith) ? stringToCheck : `${startsWith}${stringToCheck}`;
 
+/**
+ * Throws when the Shopify credentials are malformed or incomplete.
+ * A no-op in mock mode (no `SHOPIFY_*` variables set), where the app runs
+ * against the in-memory catalog in `lib/mock`.
+ *
+ * @example
+ * validateEnvironmentVariables(); // returns immediately without SHOPIFY_* env
+ * @see lib/mock/mode.ts
+ */
 export const validateEnvironmentVariables = () => {
-  const requiredEnvironmentVariables = [
-    "SHOPIFY_STORE_DOMAIN",
-    "SHOPIFY_STOREFRONT_ACCESS_TOKEN",
-  ];
+  if (isMockCommerce()) {
+    return;
+  }
+
+  const requiredEnvironmentVariables = ["SHOPIFY_STORE_DOMAIN", "SHOPIFY_STOREFRONT_ACCESS_TOKEN"];
   const missingEnvironmentVariables = [] as string[];
 
   requiredEnvironmentVariables.forEach((envVar) => {
