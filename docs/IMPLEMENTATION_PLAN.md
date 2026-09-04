@@ -106,7 +106,7 @@ The root layout also emits `<meta http-equiv="origin-trial" content={WEBMCP_ORIG
 - [~] Commerce tools per route + `/learn` + origin-trial meta — in progress
 - [x] Docs and repo infrastructure (READMEs, plan, submission, eval, CI, changesets, example, skill) — this change
 - [ ] `pnpm build && pnpm typecheck && pnpm test` green on CI (Node 20 and 22)
-- [ ] Deploy `apps/commerce` to https://next-webmcp-commerce.vercel.app and verify tools without a flag
+- [x] Deploy `apps/commerce` to https://next-webmcp-commerce.vercel.app and verify tools without a flag (done 2026-09-04: search_products, add_to_cart, get_cart, start_checkout approval and checkout navigation verified in Chrome 150 via `executeTool`)
 - [ ] Run the eval protocol and fill `docs/EVAL.md` from real logs
 - [ ] Record the < 3 min video (`docs/SUBMISSION.md` script)
 - [ ] Publish `next-webmcp@0.1.0` to npm (changeset present)

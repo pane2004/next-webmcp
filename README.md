@@ -249,6 +249,17 @@ Chrome's WebMCP guidance, and where next-webmcp implements it.
 4. **Without a browser that supports WebMCP** — `<ModelContext>` is a no-op. Use `next-webmcp/internal`'s
    `__resetForTests()` and a fake `document.modelContext` in Vitest (see `packages/next-webmcp/test`).
 
+### Verified against Chrome 150 (2026-09-04)
+
+The library is exercised on the live demo with the origin-trial token, not only against the in-memory fake.
+Three places where Chrome 150 differs from `webmcp-types@0.1.6`, and how `next-webmcp` handles them:
+
+| Chrome 150 behavior                                                         | What the library does                                                                                     |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `document.modelContext.registerTool()` returns `undefined`, not a `Promise` | Wraps the call in `Promise.resolve()` and a `try/catch`, so a failed registration never unmounts the tree |
+| `execute(input)` is called with a single argument (no `{ signal }`)         | Treats the per-call signal as optional and always merges it with the mount signal                         |
+| `executeTool()` accepts only the `RegisteredTool` object from `getTools()`  | The DevTools runner resolves the name to the object before calling                                        |
+
 ## Demo
 
 Live: **https://next-webmcp-commerce.vercel.app** — a fork of [vercel/commerce](https://github.com/vercel/commerce)
