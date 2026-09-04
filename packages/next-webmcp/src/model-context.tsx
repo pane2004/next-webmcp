@@ -213,10 +213,20 @@ export function ModelContext({ tools, children }: ModelContextProps): React.JSX.
 
       // Spec call: document.modelContext.registerTool(tool, { signal }). Aborting `signal`
       // on unmount unregisters every tool from this mount.
-      mc.registerTool(native, { signal: controller.signal }).catch((err: unknown) => {
+      // Chrome 150 returns undefined here (the spec and webmcp-types say Promise<void>), so
+      // normalise with Promise.resolve and never let a registration failure unmount the tree.
+      const onRegisterError = (err: unknown): void => {
         if (isDev())
           console.warn(`[next-webmcp] registerTool("${name}") failed: ${errorMessage(err)}`);
-      });
+      };
+      try {
+        void Promise.resolve(mc.registerTool(native, { signal: controller.signal })).catch(
+          onRegisterError,
+        );
+      } catch (err) {
+        onRegisterError(err);
+        continue;
+      }
       const info: { route: string; description: string; title?: string } = {
         route,
         description: def.description,
