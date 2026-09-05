@@ -115,6 +115,16 @@ export const registry = {
       setState({ ...state, tools });
     };
   },
+  /**
+   * Moves a registered tool to `route` after client-side navigation, so DevTools grouping follows
+   * the page without a `document.modelContext` round trip. No-op when `name` is unknown or the
+   * route is unchanged (no listener wake-up).
+   */
+  updateToolRoute(name: string, route: string): void {
+    const current = state.tools[name];
+    if (current === undefined || current.route === route) return;
+    setState({ ...state, tools: { ...state.tools, [name]: { ...current, route } } });
+  },
   recordCall(record: ToolCallRecord): void {
     setState({ ...state, calls: [record, ...state.calls].slice(0, CALL_LOG_LIMIT) });
   },

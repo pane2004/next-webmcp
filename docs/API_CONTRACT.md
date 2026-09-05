@@ -1,4 +1,4 @@
-# next-webmcp — public API contract (v0.1.0, revised 2026-09-04)
+# next-webmcp — public API contract (v0.1.0, revised 2026-09-05)
 
 This is the single source of truth for the package surface. Library authors implement exactly this;
 app authors and doc authors code against exactly this. Do not invent extra exports.
@@ -10,7 +10,7 @@ app authors and doc authors code against exactly this. Do not invent extra expor
 - Tool: `{ name, title?, description, inputSchema?: object (JSON Schema), execute(input, { signal }), annotations?: { readOnlyHint?, untrustedContentHint? } }`.
   `name` must be 1–128 chars, ASCII alphanumeric, `_`, `-`, `.`.
 - `execute` returns a string (or a serializable value; we always return a string).
-- Unregister = abort the `signal`. Chrome 153+ does not cancel in-flight executions on abort. Use one `AbortController` per mount.
+- Unregister = abort the `signal`. Chrome 153+ does not cancel in-flight executions on abort. We use one `AbortController` per registered tool (see Registration semantics).
 - `document.modelContext.getTools()` → `Promise<RegisteredTool[]>` (alphabetized). `toolchange` event on `document.modelContext` (it is an EventTarget).
 - `document.modelContext.executeTool(tool, jsonString, { signal? })` (Chrome dev-only; not in webmcp-types — call via a loose cast). Returns `null` if the tool triggers navigation.
 - Declarative: `<form toolname tooldescription [toolautosubmit]>`, inputs may carry `toolparamdescription`. On agent submit `SubmitEvent.agentInvoked === true`; call `e.preventDefault()` then `e.respondWith(promise)`. `window` events `toolactivated` / `toolcancel` carry `toolName`. CSS `:tool-form-active`, `:tool-submit-active`.
@@ -55,10 +55,10 @@ export type ConfirmRequest = {
 };
 
 export type ToolContext = {
-  params: Record<string, string | string[]>; // from useParams()
-  pathname: string; // from usePathname()
+  params: Record<string, string | string[]>; // from useParams(), as of the call (not the registration)
+  pathname: string; // from usePathname(), as of the call
   searchParams: URLSearchParams; // read from window.location.search when the tool runs (no useSearchParams Suspense bailout)
-  router: AppRouterInstance; // from useRouter() (next/navigation)
+  router: AppRouterInstance; // from useRouter() (next/navigation), as of the call
   confirm: (req: ConfirmRequest, signal?: AbortSignal) => Promise<boolean>;
 };
 
@@ -107,7 +107,7 @@ export type RegisteredToolInfo = {
   description: string;
   inputSchema?: object;
   annotations?: ToolAnnotations;
-  route?: string; // route = pathname that registered it (from our registry; undefined for tools we did not register, e.g. declarative forms)
+  route?: string; // pathname the owning <ModelContext> currently renders under (from our registry; follows navigation; undefined for tools we did not register, e.g. declarative forms)
 };
 
 export type NextWebMCPErrorCode =
@@ -123,7 +123,7 @@ export class NextWebMCPError extends Error {
 }
 ```
 
-Execution semantics inside `ModelContext` (per tool, per mount):
+Execution semantics inside `ModelContext` (per call; `def` and `ctx` are the latest definition and route context at the time of the call, see Registration semantics):
 
 1. Parse raw input with `def.input.safeParse`. On failure return
    `Invalid input for <name>: <issue path>: <message>; ... Fix the arguments and call again.`
@@ -138,10 +138,28 @@ Execution semantics inside `ModelContext` (per tool, per mount):
 5. Record `{ name, route: pathname, args, durationMs, result, ok }` in the registry (ring buffer 200) — dev and prod (cheap).
 6. Tools that navigate must compute and return their string first and call `router.push` in a microtask/after (documented; the app is responsible).
 
-Registration semantics:
+Registration semantics (register by stable key, since 2026-09-05):
 
-- One `AbortController` per `<ModelContext>` mount. Register on mount; abort on unmount. Re-register when `pathname` or serialized `params` change (so `ctx` is fresh).
-- Duplicate names across nested `ModelContext`s: dev `console.warn` once (`TOOL_NAME_DUPLICATE`); the later registration wins (Chrome replaces same-name tools).
+- **Identity.** Each `ToolDef` has a stable key: the JSON of `{ name, title, description, inputSchema, annotations }`, where
+  `inputSchema = toolInputToJsonSchema(def.input)` (WeakMap-cached). `confirm` and `execute` are not part of the key. Keys are
+  computed in effects (or memoized), never during render; nothing touches `document` during render.
+- **Diffing.** An instance keeps `Map<name, { key, controller }>`. The registration effect depends on `[tools]` only. On every
+  run, for each def: unknown name → `registerTool(native, { signal })` with a NEW `AbortController` for that tool; same name and
+  same key → nothing; same name and different key → abort the old controller, register anew. Names present before and absent
+  now → abort. Unmount → abort all. One controller per tool, never per mount: a change to one tool does not churn its siblings.
+- **Latest-closure dispatch.** A ref `latest = { defsByName, pathname, params, router }` is synced in an effect declared before
+  the registration effect. The native `execute` wrapper reads `latest.current` when the call arrives: `def` (so a new factory
+  result under the same key runs the new `execute`/`confirm`), `pathname`, `params`, `router`. `ctx.searchParams` is read
+  lazily from `window.location.search`. The per-call signal is `anySignal([options.signal?, thisTool.controller.signal])`.
+- **Route attribution.** `registry.registerTool(name, info)` runs once per (re)registration with the pathname at that time;
+  `registry.updateToolRoute(name, route)` runs from a `[pathname]` effect for the instance's names, so `RegisteredToolInfo.route`
+  and the DevTools grouping follow navigation without any `document.modelContext` call.
+- **Guarantees.** Re-renders, new `tools` array identities, `pathname`/`params` changes and new factory results with the same
+  identity never re-register (no `toolchange`, no window where a still-mounted tool is missing). `execute` always runs the
+  latest definition with the current route context. Under StrictMode a mount still ends with exactly one registration per tool.
+- Duplicate names across nested `ModelContext`s: dev `console.warn` once (`TOOL_NAME_DUPLICATE`); the registration that
+  lands last wins (Chrome replaces same-name tools). Instances mounted in the same commit register child-first (React runs
+  inner effects before outer ones), so the outer definition wins; an inner instance mounted in a later commit wins. Pinned by tests.
 - No `document.modelContext`: `console.info` once (`[next-webmcp] document.modelContext is unavailable…`) and no-op. Never throw in render or effects.
 - Feature detection helper `isModelContextAvailable()` is exported too.
 
@@ -258,5 +276,5 @@ follows the object's key order; tool order follows the array. Nothing is written
 
 ```ts
 export function __resetForTests(): void;
-export const registry: { getState(): RegistryState; subscribe(cb: () => void): () => void; ... };
+export const registry: { getState(): RegistryState; subscribe(cb: () => void): () => void; updateToolRoute(name: string, route: string): void; ... };
 ```

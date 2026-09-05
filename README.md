@@ -102,22 +102,31 @@ Peer dependencies: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4` (JSO
 ### Route-scoped tools
 
 `<ModelContext tools={...}>` is a client component. On mount it feature-detects `document.modelContext`,
-converts each Zod schema with `z.toJSONSchema`, and calls `registerTool(tool, { signal })` once per tool with
-one `AbortController` per mount. Unmounting aborts the signal, which is how WebMCP unregisters tools. When
-`pathname` or route `params` change, the tools re-register so the context is fresh.
+converts each Zod schema with `z.toJSONSchema`, and calls `registerTool(tool, { signal })` once per tool, each
+with its own `AbortController`. Unmounting aborts the signals, which is how WebMCP unregisters tools.
+
+Registration is keyed by tool identity: `name`, `title`, `description`, the JSON Schema of `input`, and
+`annotations` — the fields Chrome sees. Re-renders, new `tools` array identities, route changes, and factory
+results with the same identity never re-register anything. Only a tool that appears, disappears, or changes
+shape triggers a `registerTool` or an abort, and only for that tool. `execute` always runs the latest
+definition with the route context (`pathname`, `params`, `searchParams`, `router`) read when the call
+arrives, so a layout-level tool keeps working across navigation with no gap, and the DevTools route grouping
+follows the URL.
 
 Mount one `<ModelContext>` per segment that owns tools: the root layout can expose `get_cart`, and
-`product/[handle]/page.tsx` can add `add_to_cart` that reads `ctx.params.handle`. Nested contexts add up. If
-two contexts register the same name, the later one wins and a `TOOL_NAME_DUPLICATE` warning is logged once
-in development. Without `document.modelContext` (SSR, other browsers) the component is a no-op that logs one
-`console.info`.
+`product/[handle]/page.tsx` can add `add_to_cart` that reads `ctx.params.handle`. Nested contexts add up, so
+keep names unique across them. If two contexts register the same name, the registration that lands last wins
+and a `TOOL_NAME_DUPLICATE` warning is logged once in development. Which one lands last depends on mount
+order: when both mount in the same commit React runs the inner instance's effects first, so the outer
+definition wins; an inner instance mounted in a later commit (after a client navigation) wins. Without
+`document.modelContext` (SSR, other browsers) the component is a no-op that logs one `console.info`.
 
 ### Server actions as `execute`
 
 `execute` is curried: `execute: (ctx) => async (input, { signal }) => ...`. The outer function receives the
-route context (`params`, `pathname`, `searchParams`, `router`, `confirm`); the inner function receives
-validated input. Call server actions from it directly — they run with the user's cookies and session, so an
-agent can only do what the signed-in user can do.
+route context (`params`, `pathname`, `searchParams`, `router`, `confirm`) as of the call; the inner function
+receives validated input. Call server actions from it directly — they run with the user's cookies and
+session, so an agent can only do what the signed-in user can do.
 
 Every call goes through the same pipeline: `safeParse` the input (invalid input returns
 `Invalid input for <name>: … Fix the arguments and call again.`), ask for confirmation if `confirm` is set,
@@ -211,21 +220,21 @@ Full reference with signatures and examples: **[docs/api.md](./docs/api.md)**.
 
 Chrome's WebMCP guidance, and where next-webmcp implements it.
 
-| Chrome rule                                                                                                      | next-webmcp                                                                                                               |
-| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `document.modelContext` may be undefined; feature-detect.                                                        | `isModelContextAvailable()`; `<ModelContext>` no-ops with one `console.info`. Nothing touches `document` at module scope. |
-| Register with `registerTool(tool, { signal })`; abort the signal to unregister.                                  | One `AbortController` per mount; aborted on unmount and before re-registration.                                           |
-| Tool `name` is 1–128 ASCII alphanumerics, `_`, `-`, `.`.                                                         | Validated before registration → `TOOL_NAME_INVALID`.                                                                      |
-| `inputSchema` is JSON Schema.                                                                                    | `z.toJSONSchema(def.input)`.                                                                                              |
-| `execute` should return a string (or serializable value).                                                        | Always a string: passthrough or `JSON.stringify`.                                                                         |
-| Annotations `readOnlyHint` / `untrustedContentHint`.                                                             | Passed through verbatim; `consequentialHint` forwarded for newer builds.                                                  |
-| Aborting does not cancel in-flight executions (Chrome 153+).                                                     | The mount signal is forwarded as `opts.signal`; long actions can check `signal.aborted`.                                  |
-| Same-name registration replaces the previous tool.                                                               | Later `<ModelContext>` wins; `TOOL_NAME_DUPLICATE` warning in development.                                                |
-| `getTools()` is alphabetized; `toolchange` fires on changes.                                                     | `useModelContextTools()` and the DevTools **Tools** tab subscribe to both.                                                |
-| `executeTool()` returns `null` if the tool navigates.                                                            | DevTools **Run** shows "navigated (null)"; docs tell tools to return first, then `router.push`.                           |
-| Declarative forms: `toolname`, `tooldescription`, `toolautosubmit`; `e.agentInvoked` + `e.respondWith(promise)`. | `next-webmcp/form` sets the attributes and answers agent submits with the action's result.                                |
-| `toolactivated` / `toolcancel` window events carry `toolName`.                                                   | `Form` sets `data-tool-active` between them for styling.                                                                  |
-| Ask before consequential actions.                                                                                | `confirm` + the approval card rendered by `<ModelContext>`.                                                               |
+| Chrome rule                                                                                                      | next-webmcp                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `document.modelContext` may be undefined; feature-detect.                                                        | `isModelContextAvailable()`; `<ModelContext>` no-ops with one `console.info`. Nothing touches `document` at module scope.       |
+| Register with `registerTool(tool, { signal })`; abort the signal to unregister.                                  | One `AbortController` per tool; aborted when the tool is removed or changes identity, and on unmount. Navigation never aborts.  |
+| Tool `name` is 1–128 ASCII alphanumerics, `_`, `-`, `.`.                                                         | Validated before registration → `TOOL_NAME_INVALID`.                                                                            |
+| `inputSchema` is JSON Schema.                                                                                    | `z.toJSONSchema(def.input)`.                                                                                                    |
+| `execute` should return a string (or serializable value).                                                        | Always a string: passthrough or `JSON.stringify`.                                                                               |
+| Annotations `readOnlyHint` / `untrustedContentHint`.                                                             | Passed through verbatim; `consequentialHint` forwarded for newer builds.                                                        |
+| Aborting does not cancel in-flight executions (Chrome 153+).                                                     | The tool's signal is forwarded as `opts.signal`; long actions can check `signal.aborted`.                                       |
+| Same-name registration replaces the previous tool.                                                               | The `<ModelContext>` whose registration lands last wins (see Route-scoped tools); `TOOL_NAME_DUPLICATE` warning in development. |
+| `getTools()` is alphabetized; `toolchange` fires on changes.                                                     | `useModelContextTools()` and the DevTools **Tools** tab subscribe to both.                                                      |
+| `executeTool()` returns `null` if the tool navigates.                                                            | DevTools **Run** shows "navigated (null)"; docs tell tools to return first, then `router.push`.                                 |
+| Declarative forms: `toolname`, `tooldescription`, `toolautosubmit`; `e.agentInvoked` + `e.respondWith(promise)`. | `next-webmcp/form` sets the attributes and answers agent submits with the action's result.                                      |
+| `toolactivated` / `toolcancel` window events carry `toolName`.                                                   | `Form` sets `data-tool-active` between them for styling.                                                                        |
+| Ask before consequential actions.                                                                                | `confirm` + the approval card rendered by `<ModelContext>`.                                                                     |
 
 ## Testing your tools
 
@@ -246,7 +255,7 @@ Three places where Chrome 150 differs from `webmcp-types@0.1.6`, and how `next-w
 | Chrome 150 behavior                                                         | What the library does                                                                                     |
 | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `document.modelContext.registerTool()` returns `undefined`, not a `Promise` | Wraps the call in `Promise.resolve()` and a `try/catch`, so a failed registration never unmounts the tree |
-| `execute(input)` is called with a single argument (no `{ signal }`)         | Treats the per-call signal as optional and always merges it with the mount signal                         |
+| `execute(input)` is called with a single argument (no `{ signal }`)         | Treats the per-call signal as optional and always merges it with the tool's own signal                    |
 | `executeTool()` accepts only the `RegisteredTool` object from `getTools()`  | The DevTools runner resolves the name to the object before calling                                        |
 
 ## Examples
@@ -307,8 +316,6 @@ Build the package before running or typechecking the examples; they resolve `nex
 
 ## Roadmap
 
-- Register tools by a stable key and push route state through a channel instead of re-registering on
-  every `pathname` / `params` change.
 - Flat `execute(input, ctx)` in place of the curried form.
 - `ctx.navigate(url)`: navigate after the result is returned, without the `setTimeout` idiom.
 - `"use tool"` directive with build-time discovery of tool files.

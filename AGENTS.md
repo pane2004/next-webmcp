@@ -44,6 +44,9 @@ pnpm lint | pnpm format          # prettier --check . | prettier --write .
 - Small single-purpose modules. Naming and shape follow next-intl, nuqs, next-safe-action.
 - Tool results are strings. Errors returned to agents are sentences, never stack traces.
 - Tools that navigate return their result first and push in `setTimeout(…, 0)`.
+- `<ModelContext>` registers by tool identity (name, title, description, input schema, annotations) with one
+  `AbortController` per tool, and `execute` reads the latest definition and route context at call time. Do
+  not add mount-scoped state channels to avoid re-registration; a factory inside `useMemo` is enough.
 - Prettier: double quotes, semicolons, trailing commas, `printWidth: 100`. Run `pnpm format` before finishing.
 - Do not add dependencies to the package. Peers only: next, react, react-dom, zod.
 - Do not invent exports beyond `docs/API_CONTRACT.md`; propose contract changes there first.
@@ -68,7 +71,9 @@ Never run `git commit` or `git push` on behalf of a user unless asked. Never del
 3. Add the tool to that segment's `tools.ts` with `defineTools`/`tool`: Zod `input`, a description that says
    what it does and returns, `annotations.readOnlyHint` for reads, `confirm` for anything consequential.
 4. Mount it: a `"use client"` wrapper renders `<ModelContext tools={...}>` around the segment's children. The
-   outermost `<ModelContext>` renders the approval card; do not add a second `<ToolConfirmations />`.
+   outermost `<ModelContext>` renders the approval card; do not add a second `<ToolConfirmations />`. Tools
+   built from props (`createProductTools(product)`) go through `useMemo`; a new array or a new closure with
+   the same identity is diffed, not re-registered.
 5. Add the route's tools to the manifest handler in `app/.well-known/webmcp.json/route.ts`
    (`createManifestHandler({ "/": rootTools, "/product/[handle]": productTools, … })`).
 6. Verify in Chrome (`chrome://flags/#enable-webmcp-testing`) with the DevTools panel: the tool appears on the

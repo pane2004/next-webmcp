@@ -5,6 +5,12 @@
 export class FakeModelContext extends EventTarget {
   readonly tools = new Map<string, WebMCP.ModelContextTool>();
   registerCalls = 0;
+  /** Every registerTool call in order, so tests can count registrations and aborts per name. */
+  readonly registrations: Array<{
+    name: string;
+    tool: WebMCP.ModelContextTool;
+    signal: AbortSignal | undefined;
+  }> = [];
   ontoolchange: ((this: WebMCP.ModelContext, ev: Event) => unknown) | null = null;
 
   async registerTool(
@@ -13,6 +19,7 @@ export class FakeModelContext extends EventTarget {
   ): Promise<void> {
     if (options?.signal?.aborted) return;
     this.registerCalls += 1;
+    this.registrations.push({ name: tool.name, tool, signal: options?.signal });
     this.tools.set(tool.name, tool);
     options?.signal?.addEventListener(
       "abort",
@@ -25,6 +32,16 @@ export class FakeModelContext extends EventTarget {
       { once: true },
     );
     this.dispatchEvent(new Event("toolchange"));
+  }
+
+  /** Number of registerTool calls for `name`. */
+  registerCallsFor(name: string): number {
+    return this.registrations.filter((r) => r.name === name).length;
+  }
+
+  /** Signals of every registration for `name`, oldest first. */
+  signalsFor(name: string): Array<AbortSignal | undefined> {
+    return this.registrations.filter((r) => r.name === name).map((r) => r.signal);
   }
 
   async getTools(): Promise<WebMCP.RegisteredTool[]> {

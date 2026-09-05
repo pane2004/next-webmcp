@@ -65,11 +65,14 @@ export const getTime = tool({
 
 | Field          | Source                                                                               |
 | -------------- | ------------------------------------------------------------------------------------ |
-| `params`       | `useParams()`                                                                        |
-| `pathname`     | `usePathname()`                                                                      |
+| `params`       | `useParams()`, as of the call                                                        |
+| `pathname`     | `usePathname()`, as of the call                                                      |
 | `searchParams` | `URLSearchParams` of the current URL, read when the tool runs                        |
-| `router`       | `useRouter()` from `next/navigation`                                                 |
+| `router`       | `useRouter()` from `next/navigation`, as of the call                                 |
 | `confirm`      | `(req: ConfirmRequest, signal?) => Promise<boolean>` — the same gate `confirm:` uses |
+
+The context is built when a call arrives, not when the tool is registered, so a tool registered by a layout
+sees the route the user is on now.
 
 `ConfirmRequest` is `{ title: string; description?: string; details?: Array<{ label: string; value: string }> }`.
 
@@ -93,9 +96,12 @@ export const tools = defineTools({
 
 ### `<ModelContext tools children? confirmations? />`
 
-Registers `tools` on mount, aborts on unmount, re-registers when `pathname` or `params` change. Nest freely;
-the later registration wins on name collisions (dev warning `TOOL_NAME_DUPLICATE`). Without
-`document.modelContext` it renders its children and logs one `console.info`.
+Registers `tools` while mounted and unregisters them on unmount. Nest freely, but keep names unique across
+instances. On a collision the registration that lands last wins (dev warning `TOOL_NAME_DUPLICATE`), and
+which one lands last depends on mount order: when an outer and an inner instance mount in the same commit,
+React runs the inner instance's effects first, so the outer definition wins; an inner instance mounted in a
+later commit (for example after a client navigation) wins. Without `document.modelContext` it renders its
+children and logs one `console.info`.
 
 | Prop            | Type              | Default | Notes                                                             |
 | --------------- | ----------------- | ------- | ----------------------------------------------------------------- |
@@ -118,6 +124,36 @@ instances detect the outer one through a React context and render nothing extra.
 `confirmations={false}` on the outermost instance to mount `<ToolConfirmations />` yourself (for example
 inside a portal or a specific stacking context).
 
+#### Registration is keyed by tool identity
+
+A tool's identity is its `name`, `title`, `description`, the JSON Schema of `input`, and `annotations` — the
+fields Chrome sees. `confirm` and `execute` are not part of it. `<ModelContext>` keeps one `AbortController`
+per registered tool and diffs the `tools` array by name whenever it changes:
+
+| Change                                                   | Effect                                                                 |
+| -------------------------------------------------------- | ---------------------------------------------------------------------- |
+| A name that was not registered                           | `registerTool` with a new controller for that tool                     |
+| Same name, same identity                                 | Nothing                                                                |
+| Same name, different identity (say, a new `description`) | Abort that tool's controller and register it again; siblings untouched |
+| A name no longer in `tools`                              | Abort that tool's controller                                           |
+| Unmount                                                  | Abort every controller                                                 |
+
+Because the executor reads the current definition and route context when a call arrives, none of these
+re-register anything, and none emit a `toolchange`:
+
+- a re-render that passes a new array containing the same tools;
+- a navigation that changes `pathname` or `params` — `ctx.pathname` and `ctx.params` are read at call time;
+- a factory such as `createProductTools(product)` returning fresh definitions for a new `product` with the same
+  names, descriptions, and schemas — the next call runs the new closure.
+
+So a tool owned by a layout that stays mounted is never briefly missing while the user navigates. Building
+tools from props with a factory inside `useMemo` is the recommended pattern; `useMemo` keeps the diff cheap
+(the JSON Schema conversion is cached per Zod schema object) but a new array on every render is still
+correct.
+
+The `route` reported by `useModelContextTools()` and the DevTools **Tools** tab is the pathname the owning
+`<ModelContext>` currently renders under; it follows navigation without touching `document.modelContext`.
+
 Execution pipeline per call:
 
 1. `def.input.safeParse(raw)` — on failure the agent gets
@@ -125,7 +161,8 @@ Execution pipeline per call:
 2. `confirm` — if no confirmations renderer is mounted, the call fails at once with `CONFIRM_NO_RENDERER`
    (see [Error codes](#error-codes)). Otherwise `false`, a 60 s timeout, or an aborted signal returns
    `User declined <name>.`
-3. `await def.execute(ctx)(parsed, { signal })` — strings pass through, objects are stringified.
+3. `await def.execute(ctx)(parsed, { signal })` — the latest definition, the current route context, and the
+   tool's own signal merged with the per-call one; strings pass through, objects are stringified.
 4. Thrown errors become `<name> failed: <message>. Check the page state and try again.` No stack traces.
 5. The call is appended to the 200-entry ring buffer behind `useToolCalls()`.
 
@@ -179,7 +216,8 @@ export function CallLog() {
 ### `useModelContextTools()`
 
 Live list from `document.modelContext.getTools()`, refreshed on `toolchange`. Tools registered by
-`<ModelContext>` carry the `route` that registered them; declarative forms and other registrations do not.
+`<ModelContext>` carry the `route` their owner currently renders under (it follows navigation); declarative
+forms and other registrations do not.
 
 ```tsx
 "use client";
@@ -425,6 +463,12 @@ Those hooks wrap `registerTool` well. next-webmcp is specific to Next.js: route 
 the user's session; `next/form` gets a declarative wrapper with `respondWith` and typed attributes;
 `confirm` renders an approval card; the DevTools panel groups tools by route; and the manifest handler is
 built from the same tool definitions.
+
+**Do my tools re-register when I navigate or re-render?**
+No. Registration is keyed by tool identity (name, title, description, input schema, annotations), and the
+executor reads the latest definition and route context at call time. A re-render, a new `tools` array, a
+`pathname`/`params` change, or a factory returning new closures with the same identity leaves the registration
+untouched. Only adding, removing, or reshaping a tool touches `document.modelContext`, and only for that tool.
 
 **Does it work without a WebMCP-capable browser?**
 Yes — `<ModelContext>` logs one `console.info` and does nothing. Your UI is unchanged.

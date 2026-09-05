@@ -127,9 +127,77 @@ async function runTool({ def, name, route, raw, signal, ctx }: RunOptions): Prom
   return output;
 }
 
+/** Route params as handed to tools: `useParams()` output with `undefined` entries dropped. */
+type RouteParams = Record<string, string | string[]>;
+
+/**
+ * What a native `execute` call reads at call time (never at registration time), so a tool
+ * registered once keeps seeing the current route and the current `execute`/`confirm` closures.
+ */
+type Latest = {
+  /** First definition per name in the current `tools` prop. */
+  readonly defsByName: ReadonlyMap<string, ToolDef>;
+  readonly pathname: string;
+  readonly params: RouteParams;
+  readonly router: AppRouterInstance;
+};
+
+/** One live `document.modelContext.registerTool()` call owned by a `<ModelContext>` instance. */
+type Registration = {
+  /** {@link toolKey} of the definition that was registered. */
+  readonly key: string;
+  /** Aborting this signal unregisters exactly this tool. */
+  readonly controller: AbortController;
+  /** Drops the registry entry that backs DevTools route attribution. */
+  readonly unregister: () => void;
+};
+
+const EMPTY_DEFS: ReadonlyMap<string, ToolDef> = new Map();
+const EMPTY_PARAMS: RouteParams = Object.freeze({});
+
+/**
+ * Identity of a tool as the browser sees it: everything `registerTool` receives except `execute`.
+ * Two definitions with equal keys share one registration; `execute` and `confirm` are looked up
+ * from the latest definition on every call, so a new factory result (say, one closing over a
+ * different product) never re-registers.
+ */
+function toolKey(def: ToolDef, name: string, inputSchema: object): string {
+  return JSON.stringify({
+    name,
+    title: def.title,
+    description: def.description,
+    inputSchema,
+    annotations: def.annotations,
+  });
+}
+
+function toRouteParams(params: Record<string, string | string[] | undefined> | null): RouteParams {
+  if (!params) return EMPTY_PARAMS;
+  const out: RouteParams = {};
+  for (const [key, value] of Object.entries(params)) if (value !== undefined) out[key] = value;
+  return out;
+}
+
+/** First definition wins for duplicate names, matching the registration order below. */
+function indexByName(tools: ToolDef[]): ReadonlyMap<string, ToolDef> {
+  const map = new Map<string, ToolDef>();
+  for (const def of tools) if (def.name !== undefined && !map.has(def.name)) map.set(def.name, def);
+  return map;
+}
+
+function release(registration: Registration): void {
+  registration.controller.abort();
+  registration.unregister();
+}
+
 /**
  * Registers `tools` on `document.modelContext` while mounted, scoped to the current route.
- * Re-registers when `pathname` or route `params` change so `ctx` stays fresh; aborts on unmount.
+ *
+ * Each tool is registered by a stable key (`name`, `title`, `description`, JSON `inputSchema`,
+ * `annotations`) with its own `AbortController`: a new `tools` array with the same keys is a
+ * no-op, a tool whose key changed is re-registered on its own, tools that disappear are
+ * aborted, and unmount aborts everything. `execute`, `confirm`, `pathname`, `params` and
+ * `router` are read from the latest render on every call, so navigation never re-registers.
  * Renders its children plus, for the outermost instance only, the approval card
  * (`<ToolConfirmations/>`); pass `confirmations={false}` to mount that yourself.
  * Safe when WebMCP is unavailable (logs once, no-op).
@@ -153,13 +221,23 @@ export function ModelContext({
   const params = useParams();
   const pathname = usePathname();
   const router = useRouter();
-  const routerRef = useRef<AppRouterInstance>(router);
-  const paramsKey = JSON.stringify(params ?? {});
+  // Written only inside effects (React Compiler safe). The sync effect below runs before the
+  // registration effect in every commit, so no registered tool ever reads the initial value.
+  const latest = useRef<Latest>({ defsByName: EMPTY_DEFS, pathname, params: EMPTY_PARAMS, router });
+  const registrations = useRef(new Map<string, Registration>());
 
+  // 1. Latest closure. Declared first so (re)registrations and native execute calls in the same
+  //    commit see this render's route and definitions.
   useEffect(() => {
-    routerRef.current = router;
-  });
+    latest.current = {
+      defsByName: indexByName(tools),
+      pathname,
+      params: toRouteParams(params),
+      router,
+    };
+  }, [tools, pathname, params, router]);
 
+  // 2. Register by stable key: diff `tools` against what this instance already registered.
   useEffect(() => {
     const mc = getModelContext();
     if (!mc) {
@@ -170,11 +248,10 @@ export function ModelContext({
       );
       return;
     }
-    const controller = new AbortController();
-    const unregisters: Array<() => void> = [];
+    const live = registrations.current;
+    const route = latest.current.pathname;
     const seen = new Set<string>();
-    const route = pathname;
-    const routeParams = (JSON.parse(paramsKey) as Record<string, string | string[]>) ?? {};
+    const keep = new Set<string>();
 
     for (const def of tools) {
       const name = def.name;
@@ -205,21 +282,18 @@ export function ModelContext({
         continue;
       }
 
-      const buildContext = (signal: AbortSignal): ToolContext => ({
-        params: routeParams,
-        pathname: route,
-        searchParams: new URLSearchParams(
-          typeof window === "undefined" ? "" : window.location.search,
-        ),
-        router: routerRef.current,
-        confirm: (request, confirmSignal) =>
-          registry.requestConfirm(
-            name,
-            request,
-            confirmSignal ? anySignal([confirmSignal, signal]) : signal,
-          ),
-      });
+      const key = toolKey(def, name, inputSchema);
+      const existing = live.get(name);
+      if (existing !== undefined && existing.key === key) {
+        keep.add(name);
+        continue;
+      }
+      if (existing !== undefined) {
+        release(existing);
+        live.delete(name);
+      }
 
+      const controller = new AbortController();
       const native: WebMCP.ModelContextTool = {
         name,
         description: def.description,
@@ -231,14 +305,37 @@ export function ModelContext({
           const signal = anySignal(
             execSignal ? [execSignal, controller.signal] : [controller.signal],
           );
-          return runTool({ def, name, route, raw, signal, ctx: buildContext(signal) });
+          // Read at call time: the newest closure for this name, and the current route.
+          const current = latest.current;
+          const ctx: ToolContext = {
+            params: current.params,
+            pathname: current.pathname,
+            searchParams: new URLSearchParams(
+              typeof window === "undefined" ? "" : window.location.search,
+            ),
+            router: current.router,
+            confirm: (request, confirmSignal) =>
+              registry.requestConfirm(
+                name,
+                request,
+                confirmSignal ? anySignal([confirmSignal, signal]) : signal,
+              ),
+          };
+          return runTool({
+            def: current.defsByName.get(name) ?? def,
+            name,
+            route: current.pathname,
+            raw,
+            signal,
+            ctx,
+          });
         },
       };
       if (def.title !== undefined) native.title = def.title;
       if (def.annotations !== undefined) native.annotations = def.annotations;
 
       // Spec call: document.modelContext.registerTool(tool, { signal }). Aborting `signal`
-      // on unmount unregisters every tool from this mount.
+      // unregisters this one tool.
       // Chrome 150 returns undefined here (the spec and webmcp-types say Promise<void>), so
       // normalise with Promise.resolve and never let a registration failure unmount the tree.
       const onRegisterError = (err: unknown): void => {
@@ -258,14 +355,32 @@ export function ModelContext({
         description: def.description,
       };
       if (def.title !== undefined) info.title = def.title;
-      unregisters.push(registry.registerTool(name, info));
+      live.set(name, { key, controller, unregister: registry.registerTool(name, info) });
+      keep.add(name);
     }
 
+    // Names registered earlier but gone (or no longer registrable) now.
+    for (const [name, registration] of live) {
+      if (keep.has(name)) continue;
+      release(registration);
+      live.delete(name);
+    }
+  }, [tools]);
+
+  // 3. Route attribution (DevTools grouping) follows navigation without touching the browser.
+  useEffect(() => {
+    for (const name of registrations.current.keys()) registry.updateToolRoute(name, pathname);
+  }, [pathname]);
+
+  // 4. Unmount aborts every tool this instance owns. Kept separate from the registration effect
+  //    so a `tools` change never tears down unchanged siblings.
+  useEffect(() => {
+    const live = registrations.current;
     return () => {
-      controller.abort();
-      for (const unregister of unregisters) unregister();
+      for (const registration of live.values()) release(registration);
+      live.clear();
     };
-  }, [tools, pathname, paramsKey]);
+  }, []);
 
   return (
     <ModelContextNesting.Provider value={true}>

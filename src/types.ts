@@ -27,9 +27,9 @@ export type ConfirmRequest = {
 
 /** Route-aware context handed to `execute(ctx)` and `confirm(input, ctx)`. */
 export type ToolContext = {
-  /** From `useParams()`. */
+  /** From `useParams()`, read when the tool runs. */
   params: Record<string, string | string[]>;
-  /** From `usePathname()`. */
+  /** From `usePathname()`, read when the tool runs. */
   pathname: string;
   /** Read lazily from `window.location.search` when the tool runs. */
   searchParams: URLSearchParams;
@@ -55,6 +55,11 @@ export type AnyZodSchema = z.ZodType<any, any>;
 
 /**
  * A route-scoped tool definition. Create with {@link tool} for full inference.
+ *
+ * Inside `<ModelContext>` the browser registration is keyed by `name`, `title`, `description`,
+ * the JSON Schema of `input` and `annotations`. `execute` and `confirm` are read from the latest
+ * definition on every call, so rebuilding the `tools` array (or closing over new data) with the
+ * same keys never re-registers anything.
  * @see https://github.com/pane2004/next-webmcp#tool
  */
 export type ToolDef<TInput extends z.ZodTypeAny = AnyZodSchema> = {
