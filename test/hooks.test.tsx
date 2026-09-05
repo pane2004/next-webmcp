@@ -60,6 +60,53 @@ describe("useModelContextTools()", () => {
   });
 });
 
+describe("useModelContextTools() on Chrome 150", () => {
+  it("returns object schemas and annotations when the browser hands back strings", async () => {
+    fake.chrome150Shape = true;
+    let seen: RegisteredToolInfo[] = [];
+    function Probe(): null {
+      seen = useModelContextTools();
+      return null;
+    }
+    const ours = tool({
+      name: "ours",
+      description: "Ours",
+      input: z.object({ q: z.string().describe("Query") }),
+      annotations: { readOnlyHint: true },
+      execute: () => async () => "",
+    });
+    await act(async () => {
+      render(
+        <ModelContext tools={[ours]}>
+          <Probe />
+        </ModelContext>,
+      );
+    });
+    // A tool registered outside next-web-mcp (e.g. a declarative form): only the browser copy exists.
+    await act(async () => {
+      await fake.registerTool({
+        name: "foreign",
+        description: "F",
+        inputSchema: { type: "object", properties: { email: { type: "string" } } },
+        execute: () => "",
+      });
+    });
+    const mine = seen.find((x) => x.name === "ours");
+    const foreign = seen.find((x) => x.name === "foreign");
+    expect(mine?.inputSchema).toMatchObject({
+      type: "object",
+      properties: { q: { type: "string", description: "Query" } },
+    });
+    expect(mine?.annotations).toEqual({ readOnlyHint: true });
+    expect(mine?.route).toBeDefined();
+    expect(foreign?.inputSchema).toEqual({
+      type: "object",
+      properties: { email: { type: "string" } },
+    });
+    expect(foreign?.annotations).toBeUndefined();
+  });
+});
+
 describe("isModelContextAvailable()", () => {
   it("reflects document.modelContext", () => {
     expect(isModelContextAvailable()).toBe(true);

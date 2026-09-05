@@ -313,11 +313,12 @@ Chrome's WebMCP guidance, and where next-web-mcp implements it.
 The library is exercised on the live demo with the origin-trial token, not only against the in-memory fake.
 Three places where Chrome 150 differs from `webmcp-types@0.1.6`, and how `next-web-mcp` handles them:
 
-| Chrome 150 behavior                                                         | What the library does                                                                                     |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `document.modelContext.registerTool()` returns `undefined`, not a `Promise` | Wraps the call in `Promise.resolve()` and a `try/catch`, so a failed registration never unmounts the tree |
-| `execute(input)` is called with a single argument (no `{ signal }`)         | Treats the per-call signal as optional and always merges it with the tool's own signal                    |
-| `executeTool()` accepts only the `RegisteredTool` object from `getTools()`  | The DevTools runner resolves the name to the object before calling                                        |
+| Chrome 150 behavior                                                                        | What the library does                                                                                     |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `document.modelContext.registerTool()` returns `undefined`, not a `Promise`                | Wraps the call in `Promise.resolve()` and a `try/catch`, so a failed registration never unmounts the tree |
+| `execute(input)` is called with a single argument (no `{ signal }`)                        | Treats the per-call signal as optional and always merges it with the tool's own signal                    |
+| `executeTool()` accepts only the `RegisteredTool` object from `getTools()`                 | The DevTools runner resolves the name to the object before calling                                        |
+| `getTools()` returns `inputSchema` as a JSON string, `title` as `""`, and no `annotations` | `useModelContextTools()` parses string schemas and prefers the schema and annotations this app registered |
 
 ## Examples
 

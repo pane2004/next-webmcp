@@ -8,7 +8,13 @@ import { getModelContext } from "./native";
 import { nextId, registry } from "./registry";
 import { formatZodIssues, toolInputToJsonSchema } from "./schema";
 import { TOOL_NAME_PATTERN } from "./tool";
-import type { AppRouterInstance, ConfirmRequest, ToolContext, ToolDef } from "./types";
+import type {
+  AppRouterInstance,
+  ConfirmRequest,
+  ToolAnnotations,
+  ToolContext,
+  ToolDef,
+} from "./types";
 
 /** Props for {@link ModelContext}. */
 export type ModelContextProps = {
@@ -342,11 +348,15 @@ export function ModelContext({
         onRegisterError(err);
         continue;
       }
-      const info: { route: string; description: string; title?: string } = {
-        route,
-        description: def.description,
-      };
+      const info: {
+        route: string;
+        description: string;
+        title?: string;
+        inputSchema: object;
+        annotations?: ToolAnnotations;
+      } = { route, description: def.description, inputSchema };
       if (def.title !== undefined) info.title = def.title;
+      if (def.annotations !== undefined) info.annotations = def.annotations;
       live.set(name, { key, controller, unregister: registry.registerTool(name, info) });
       keep.add(name);
     }

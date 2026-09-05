@@ -326,7 +326,10 @@ export function CallLog() {
 
 ### `useModelContextTools()`
 
-Live list from `document.modelContext.getTools()`, refreshed on `toolchange`. Tools registered by
+Live list from `document.modelContext.getTools()`, refreshed on `toolchange`. Chrome 150 returns
+`inputSchema` there as a JSON string and omits `annotations`; the hook parses string schemas and
+prefers the schema and annotations this app registered, so `<WebMCPDevTools/>` always shows the real
+definition. Tools registered by
 `<ModelContext>` carry the `route` their owner currently renders under (it follows navigation); declarative
 forms and other registrations do not.
 

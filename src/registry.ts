@@ -7,10 +7,15 @@ export const CONFIRM_TIMEOUT_MS = 60_000;
 export const CALL_LOG_LIMIT = 200;
 
 /** A tool registered through `<ModelContext>` and the route that owns it. */
+import type { ToolAnnotations } from "./types";
+
 export type RegisteredRoute = {
   readonly route: string;
   readonly title?: string;
   readonly description: string;
+  /** The JSON Schema handed to the browser; kept because Chrome 150 returns it as a string. */
+  readonly inputSchema?: object;
+  readonly annotations?: ToolAnnotations;
 };
 
 /** A confirmation awaiting a user decision. */

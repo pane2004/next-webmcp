@@ -5,6 +5,8 @@
 export class FakeModelContext extends EventTarget {
   readonly tools = new Map<string, WebMCP.ModelContextTool>();
   registerCalls = 0;
+  /** Mimic Chrome 150: getTools() returns inputSchema as a JSON string and omits annotations. */
+  chrome150Shape = false;
   /** Every registerTool call in order, so tests can count registrations and aborts per name. */
   readonly registrations: Array<{
     name: string;
@@ -54,9 +56,12 @@ export class FakeModelContext extends EventTarget {
           window,
           origin: window.location.origin,
         };
-        if (t.inputSchema !== undefined)
-          info.inputSchema = JSON.parse(JSON.stringify(t.inputSchema)) as object;
-        if (t.annotations !== undefined) info.annotations = t.annotations;
+        if (t.inputSchema !== undefined) {
+          info.inputSchema = this.chrome150Shape
+            ? (JSON.stringify(t.inputSchema) as unknown as object)
+            : (JSON.parse(JSON.stringify(t.inputSchema)) as object);
+        }
+        if (!this.chrome150Shape && t.annotations !== undefined) info.annotations = t.annotations;
         return info;
       })
       .sort((a, b) => a.name.localeCompare(b.name));

@@ -37,6 +37,19 @@ export function useToolCalls(): ToolCallRecord[] {
  * ```
  * @see https://github.com/pane2004/next-webmcp#usemodelcontexttools
  */
+/** Chrome 150 hands `RegisteredTool.inputSchema` back as a JSON string; the spec says object. */
+function parseNativeSchema(value: unknown): object | undefined {
+  if (typeof value === "string") {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return parsed !== null && typeof parsed === "object" ? parsed : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  return value !== null && typeof value === "object" ? value : undefined;
+}
+
 export function useModelContextTools(): RegisteredToolInfo[] {
   const [native, setNative] = useState<WebMCP.RegisteredTool[]>([]);
   const routes = useSyncExternalStore(
@@ -67,12 +80,16 @@ export function useModelContextTools(): RegisteredToolInfo[] {
   return useMemo(
     () =>
       native.map((t) => {
+        const own = routes[t.name];
         const info: RegisteredToolInfo = { name: t.name, description: t.description };
         if (t.title) info.title = t.title;
-        if (t.inputSchema !== undefined) info.inputSchema = t.inputSchema;
-        if (t.annotations !== undefined) info.annotations = t.annotations;
-        const route = routes[t.name]?.route;
-        if (route !== undefined) info.route = route;
+        // Prefer what this app registered: Chrome 150 returns inputSchema as a JSON string and
+        // omits annotations from getTools(), so the browser copy is only a fallback.
+        const inputSchema = own?.inputSchema ?? parseNativeSchema(t.inputSchema);
+        if (inputSchema !== undefined) info.inputSchema = inputSchema;
+        const annotations = own?.annotations ?? t.annotations;
+        if (annotations !== undefined) info.annotations = annotations;
+        if (own?.route !== undefined) info.route = own.route;
         return info;
       }),
     [native, routes],
