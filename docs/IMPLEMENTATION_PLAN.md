@@ -114,7 +114,7 @@ The root layout also emits `<meta http-equiv="origin-trial" content={WEBMCP_ORIG
       navigation verified in Chrome 150 via `executeTool`)
 - [x] Flatten the repo: package at the root, `examples/commerce` + `examples/minimal` as workspace members
 - [x] 0.2 API cleanup items 4–6 (below) — 2026-09-04
-- [ ] `pnpm build && pnpm typecheck && pnpm typecheck:examples && pnpm test` green on CI (Node 20 and 22)
+- [ ] `pnpm build && pnpm typecheck && pnpm typecheck:examples && pnpm test` green on CI (Node 22 and 24)
 - [ ] Run the eval protocol and fill `docs/EVAL.md` from real logs
 - [ ] Record the < 3 min video (`docs/SUBMISSION.md` script)
 - [ ] Publish `next-webmcp@0.1.0` to npm (changeset present)
@@ -160,7 +160,7 @@ contract; items 1–3 are next.
 
 ## 9. Definition of done
 
-- CI green on Node 20 and 22: prettier, typecheck (package and examples), tests, package build, commerce build
+- CI green on Node 22 and 24: prettier, typecheck (package and examples), tests, package build, commerce build
   (mock, no env).
 - Demo deployed; opening `https://next-webmcp-commerce.vercel.app` in Chrome 149+ lists the root tools in the
   Model Context Tool Inspector without any flag; `/.well-known/webmcp.json` returns the manifest.

@@ -95,7 +95,7 @@ pnpm add next-webmcp zod
 ```
 
 Peer dependencies: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4` (JSON Schema conversion uses
-`z.toJSONSchema`; Zod 3 throws `ZOD_TO_JSON_SCHEMA_UNSUPPORTED` at definition time). Node 20+.
+`z.toJSONSchema`; Zod 3 throws `ZOD_TO_JSON_SCHEMA_UNSUPPORTED` at definition time). Node 22+.
 
 ## Concepts
 

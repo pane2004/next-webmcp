@@ -17,7 +17,7 @@ docs/api.md               reader-facing API reference (every export, signatures,
 docs/IMPLEMENTATION_PLAN.md  behaviors B1–B12, build order, 0.2 API cleanup, risks
 docs/SUBMISSION.md, docs/EVAL.md
 skills/next-webmcp-adoption/  skill for adopting the library in another app
-.github/workflows/ci.yml  prettier → build → typecheck (package + examples) → test → build commerce (Node 20/22)
+.github/workflows/ci.yml  prettier → build → typecheck (package + examples) → test → build commerce (Node 22/24)
 .changeset/               changesets config; add one for every user-visible change
 ```
 

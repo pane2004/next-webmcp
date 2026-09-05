@@ -12,7 +12,7 @@ pnpm test
 pnpm example:commerce   # demo on http://localhost:3000
 ```
 
-Node 20 or 22. No environment variables are needed; the demo runs against a mock provider.
+Node 22 or 24. No environment variables are needed; the demo runs against a mock provider.
 
 ## Before opening a PR
 
@@ -24,7 +24,7 @@ Node 20 or 22. No environment variables are needed; the demo runs against a mock
    `"next-webmcp": patch | minor | major`, then a one-paragraph summary).
 5. Public API changes go through `docs/API_CONTRACT.md` first; update `docs/api.md` in the same PR.
 
-CI runs the same steps on Node 20 and 22.
+CI runs the same steps on Node 22 and 24.
 
 ## Guidelines
 

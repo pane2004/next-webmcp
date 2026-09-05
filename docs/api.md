@@ -8,7 +8,7 @@ tests follow see [API_CONTRACT.md](./API_CONTRACT.md).
 pnpm add next-webmcp zod
 ```
 
-Peers: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4`. Node 20+.
+Peers: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4`. Node 22+.
 
 ## Entry points
 
