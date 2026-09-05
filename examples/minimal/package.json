@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "next": "16.3.4",
-    "next-webmcp": "workspace:*",
+    "next-web-mcp": "workspace:*",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "zod": "^4.5.4"

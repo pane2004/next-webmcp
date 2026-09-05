@@ -17,3 +17,5 @@ export type {
   ToolDef,
   ToolExecuteOptions,
 } from "./types";
+export { navigationTool, type NavigationRoute } from "./navigation-tool";
+export { unwrap, type ToolActionResult } from "./action-result";

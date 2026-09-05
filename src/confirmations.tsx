@@ -51,18 +51,18 @@ function useConfirmationQueue(): readonly PendingConfirmation[] {
 
 const card: CSSProperties = {
   position: "fixed",
-  right: "var(--next-webmcp-offset, 16px)",
-  bottom: "var(--next-webmcp-offset, 16px)",
-  zIndex: "var(--next-webmcp-z-index, 2147483000)" as unknown as number,
+  right: "var(--next-web-mcp-offset, 16px)",
+  bottom: "var(--next-web-mcp-offset, 16px)",
+  zIndex: "var(--next-web-mcp-z-index, 2147483000)" as unknown as number,
   width: "min(360px, calc(100vw - 32px))",
   boxSizing: "border-box",
   padding: 16,
-  borderRadius: "var(--next-webmcp-radius, 12px)",
-  background: "var(--next-webmcp-bg, #ffffff)",
-  color: "var(--next-webmcp-fg, #111111)",
-  border: "1px solid var(--next-webmcp-border, rgba(0,0,0,0.12))",
-  boxShadow: "var(--next-webmcp-shadow, 0 8px 24px rgba(0,0,0,0.18))",
-  font: "var(--next-webmcp-font, 14px/1.4 system-ui, sans-serif)",
+  borderRadius: "var(--next-web-mcp-radius, 12px)",
+  background: "var(--next-web-mcp-bg, #ffffff)",
+  color: "var(--next-web-mcp-fg, #111111)",
+  border: "1px solid var(--next-web-mcp-border, rgba(0,0,0,0.12))",
+  boxShadow: "var(--next-web-mcp-shadow, 0 8px 24px rgba(0,0,0,0.18))",
+  font: "var(--next-web-mcp-font, 14px/1.4 system-ui, sans-serif)",
 };
 
 const button = (primary: boolean): CSSProperties => ({
@@ -74,9 +74,9 @@ const button = (primary: boolean): CSSProperties => ({
   fontWeight: 600,
   border: primary
     ? "1px solid transparent"
-    : "1px solid var(--next-webmcp-border, rgba(0,0,0,0.2))",
-  background: primary ? "var(--next-webmcp-accent, #1d4ed8)" : "transparent",
-  color: primary ? "var(--next-webmcp-accent-fg, #ffffff)" : "inherit",
+    : "1px solid var(--next-web-mcp-border, rgba(0,0,0,0.2))",
+  background: primary ? "var(--next-web-mcp-accent, #1d4ed8)" : "transparent",
+  color: primary ? "var(--next-web-mcp-accent-fg, #ffffff)" : "inherit",
 });
 
 /**
@@ -86,8 +86,8 @@ const button = (primary: boolean): CSSProperties => ({
  * harmless: only the first mounted instance draws the card.
  * Enter approves and Escape denies while focus is on the card (the Approve button is focused
  * automatically) or nowhere; keys typed into other inputs are ignored.
- * Style with CSS variables: `--next-webmcp-bg`, `--next-webmcp-fg`, `--next-webmcp-accent`, `--next-webmcp-border`,
- * `--next-webmcp-radius`, `--next-webmcp-offset`, `--next-webmcp-z-index`, `--next-webmcp-font`.
+ * Style with CSS variables: `--next-web-mcp-bg`, `--next-web-mcp-fg`, `--next-web-mcp-accent`, `--next-web-mcp-border`,
+ * `--next-web-mcp-radius`, `--next-web-mcp-offset`, `--next-web-mcp-z-index`, `--next-web-mcp-font`.
  *
  * @example
  * ```tsx
@@ -132,7 +132,7 @@ export function ToolConfirmations(): React.JSX.Element | null {
 
   if (!pending) return null;
   const { request } = pending;
-  const titleId = `next-webmcp-confirm-${pending.id}`;
+  const titleId = `next-web-mcp-confirm-${pending.id}`;
 
   return (
     <div
@@ -141,7 +141,7 @@ export function ToolConfirmations(): React.JSX.Element | null {
       aria-live="polite"
       aria-modal="false"
       aria-labelledby={titleId}
-      data-next-webmcp="confirm"
+      data-next-web-mcp="confirm"
       style={{
         ...card,
         transition: reducedMotion ? "none" : "opacity 150ms ease, transform 150ms ease",

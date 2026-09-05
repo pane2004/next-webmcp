@@ -5,7 +5,7 @@ import NextForm, { type FormProps } from "next/form";
 
 /**
  * JSX typings for Chrome's declarative WebMCP form attributes, so `<form toolname=…>` and
- * `<input toolparamdescription=…>` type-check in any file once `next-webmcp/form` is imported
+ * `<input toolparamdescription=…>` type-check in any file once `next-web-mcp/form` is imported
  * anywhere in the project. Consumers never write this augmentation themselves.
  *
  * @see https://developer.chrome.com/docs/ai/webmcp#declarative
@@ -19,7 +19,7 @@ declare module "react" {
     /**
      * Let the agent submit the form without a click. On a plain `<form>` write `toolautosubmit=""`:
      * React drops `true` for custom attributes, so the boolean form only works through `Form` from
-     * `next-webmcp/form`, which sets the attribute correctly.
+     * `next-web-mcp/form`, which sets the attribute correctly.
      */
     toolautosubmit?: boolean | "";
   }
@@ -80,7 +80,7 @@ const defaultRespond = (result: unknown): string => String(result ?? "Done");
  *
  * @example
  * ```tsx
- * import Form from "next-webmcp/form";
+ * import Form from "next-web-mcp/form";
  * <Form action={subscribe} toolname="subscribe" tooldescription="Subscribe an email to the newsletter">
  *   <input name="email" type="email" toolparamdescription="Email address" />
  *   <button>Subscribe</button>

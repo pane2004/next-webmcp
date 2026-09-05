@@ -6,7 +6,7 @@ import { ToolConfirmations } from "./confirmations";
 import { NextWebMCPError, errorMessage, isDev, warnOnce } from "./errors";
 import { getModelContext } from "./native";
 import { nextId, registry } from "./registry";
-import { toolInputToJsonSchema } from "./schema";
+import { formatZodIssues, toolInputToJsonSchema } from "./schema";
 import { TOOL_NAME_PATTERN } from "./tool";
 import type { AppRouterInstance, ConfirmRequest, ToolContext, ToolDef } from "./types";
 
@@ -61,15 +61,6 @@ function defaultConfirmRequest(def: ToolDef, name: string, input: unknown): Conf
   return request;
 }
 
-function formatIssues(issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>): string {
-  return issues
-    .map(
-      (issue) =>
-        `${issue.path.length ? issue.path.map(String).join(".") : "(root)"}: ${issue.message}`,
-    )
-    .join("; ");
-}
-
 type RunOptions = {
   def: ToolDef;
   name: string;
@@ -85,10 +76,11 @@ async function runTool({ def, name, route, raw, signal, ctx }: RunOptions): Prom
   let ok = true;
   let output: string;
   try {
-    const parsed = def.input.safeParse(raw);
+    // Async so a schema shared with a toolAction() may carry async refinements.
+    const parsed = await def.input.safeParseAsync(raw);
     if (!parsed.success) {
       ok = false;
-      output = `Invalid input for ${name}: ${formatIssues(parsed.error.issues)}. Fix the arguments and call again.`;
+      output = `Invalid input for ${name}: ${formatZodIssues(parsed.error.issues)}. Fix the arguments and call again.`;
     } else {
       let approved = true;
       if (def.confirm) {
@@ -243,7 +235,7 @@ export function ModelContext({
     if (!mc) {
       warnOnce(
         "MODEL_CONTEXT_UNAVAILABLE",
-        "[next-webmcp] document.modelContext is unavailable in this browser; tools will not be registered. Enable WebMCP in Chrome 149+ (chrome://flags/#enable-webmcp-testing) or use Chrome Canary.",
+        "[next-web-mcp] document.modelContext is unavailable in this browser; tools will not be registered. Enable WebMCP in Chrome 149+ (chrome://flags/#enable-webmcp-testing) or use Chrome Canary.",
         "info",
       );
       return;
@@ -258,14 +250,14 @@ export function ModelContext({
       if (!name || !TOOL_NAME_PATTERN.test(name)) {
         warnOnce(
           `TOOL_NAME_INVALID:${String(name)}`,
-          `[next-webmcp] TOOL_NAME_INVALID: tool ${name ? `"${name}"` : "without a name"} was skipped. Use defineTools() or set a valid name.`,
+          `[next-web-mcp] TOOL_NAME_INVALID: tool ${name ? `"${name}"` : "without a name"} was skipped. Use defineTools() or set a valid name.`,
         );
         continue;
       }
       if (seen.has(name)) {
         warnOnce(
           `TOOL_NAME_DUPLICATE:${name}`,
-          `[next-webmcp] TOOL_NAME_DUPLICATE: tool "${name}" appears twice in the same <ModelContext>.`,
+          `[next-web-mcp] TOOL_NAME_DUPLICATE: tool "${name}" appears twice in the same <ModelContext>.`,
         );
         continue;
       }
@@ -277,7 +269,7 @@ export function ModelContext({
       } catch (err) {
         warnOnce(
           `SCHEMA:${name}`,
-          `[next-webmcp] Could not convert input schema for "${name}": ${errorMessage(err)}`,
+          `[next-web-mcp] Could not convert input schema for "${name}": ${errorMessage(err)}`,
         );
         continue;
       }
@@ -340,7 +332,7 @@ export function ModelContext({
       // normalise with Promise.resolve and never let a registration failure unmount the tree.
       const onRegisterError = (err: unknown): void => {
         if (isDev())
-          console.warn(`[next-webmcp] registerTool("${name}") failed: ${errorMessage(err)}`);
+          console.warn(`[next-web-mcp] registerTool("${name}") failed: ${errorMessage(err)}`);
       };
       try {
         void Promise.resolve(mc.registerTool(native, { signal: controller.signal })).catch(

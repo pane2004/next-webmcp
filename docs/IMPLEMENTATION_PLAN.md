@@ -1,4 +1,4 @@
-# next-webmcp — implementation plan
+# next-web-mcp — implementation plan
 
 Status date: **2026-09-05**. Hackathon deadline: **2026-09-04 01:00 PDT**. Origin trial for
 `https://next-webmcp-commerce.vercel.app` expires **2026-11-16**.
@@ -10,7 +10,7 @@ This document explains how the pieces fit, what each behavior must do to be acce
 
 ```
   app/.well-known/webmcp.json/route.ts ──createManifestHandler({ "/": tools, … })──▶ GET /.well-known/webmcp.json
-                                            (next-webmcp/manifest, server-safe, same ToolDef[] as below)
+                                            (next-web-mcp/manifest, server-safe, same ToolDef[] as below)
 
   Browser (client components)
   ┌────────────────────────────────────────────────────────────────────────┐
@@ -33,7 +33,8 @@ This document explains how the pieces fit, what each behavior must do to be acce
   └────────────────────────────────────────────────────────────────────────┘
                      │ server actions (user's cookies/session)
                      ▼
-               Next.js server
+               Next.js server: toolAction(schema, handler) ──▶ { ok, data } | { ok, error }
+                               (next-web-mcp/server; the tool reads it with unwrap())
 ```
 
 Principles:
@@ -48,18 +49,22 @@ Principles:
 ## 2. Repository layout
 
 The package lives at the repository root; the examples are pnpm workspace members that depend on
-`"next-webmcp": "workspace:*"`.
+`"next-web-mcp": "workspace:*"`.
 
 ```
-src/index.ts        "use client" — tool, defineTools, ModelContext, ToolConfirmations, hooks, errors, types
+src/index.ts        "use client" — tool, defineTools, navigationTool, unwrap, ModelContext, ToolConfirmations, hooks, errors, types
+src/index.server.ts react-server build of the main entry: tool, defineTools, navigationTool, unwrap, errors are real functions
+src/navigation-tool.ts  navigationTool: navigate_to from an allowlist of route patterns (builds a ToolDef via tool())
+src/action-result.ts    ToolActionResult + unwrap, shared by the main and server entries
+src/server.ts       server-safe — toolAction (no React, no directive)
 src/form.tsx        "use client" — Form (next/form wrapper) + global JSX augmentation for the WebMCP attributes
 src/devtools.tsx    "use client" — WebMCPDevTools (returns null in production)
 src/manifest.ts     server-safe — buildManifest, createManifestHandler (no React, not a client entry)
 src/internal.ts     __resetForTests, registry
 test/               vitest + jsdom with a fake document.modelContext
-tsdown.config.ts    ESM, dts; client entries keep their "use client" directive, manifest does not get one
+tsdown.config.ts    ESM, dts; client entries keep their "use client" directive, manifest and server do not get one
 examples/commerce/  demo (vercel/commerce fork, mock provider, tools per route, /learn, manifest route)
-examples/minimal/   two tools + confirm + manifest route on a fresh App Router app
+examples/minimal/   three tools (get_time, add_todo via toolAction, navigate_to) + confirm + manifest route
 docs/               contract, api reference, this plan, submission, eval
 skills/             adoption skill for coding agents
 ```
@@ -68,7 +73,7 @@ skills/             adoption skill for coding agents
 
 | ID  | Behavior                    | Acceptance criteria                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | --- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| B1  | Feature detection           | `isModelContextAvailable()` is false in SSR and in browsers without WebMCP. `<ModelContext>` renders children, logs `[next-webmcp] document.modelContext is unavailable…` once via `console.info`, and never throws. No module-scope `document`/`window`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| B1  | Feature detection           | `isModelContextAvailable()` is false in SSR and in browsers without WebMCP. `<ModelContext>` renders children, logs `[next-web-mcp] document.modelContext is unavailable…` once via `console.info`, and never throws. No module-scope `document`/`window`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | B2  | Route-scoped registration   | On mount each tool is passed to `registerTool` with its own `AbortController.signal`; unmount aborts all. Registration is keyed by identity (`name`, `title`, `description`, `inputSchema`, `annotations`) and diffed by name on every `tools` change: new name → register; same identity → nothing; changed identity → abort + register that tool only; removed name → abort. `pathname`/`params` changes, new array identities and new factory results with the same identity never re-register; `execute` reads the latest definition and route context from a ref at call time; `registry.updateToolRoute` keeps the DevTools route current. Tests: mount → `getTools()` has N tools; unmount → 0; navigation → `registerCalls` unchanged and `ctx` fresh; one changed description → one abort + one register; StrictMode → one registration per tool. |
 | B3  | Zod → JSON Schema           | `inputSchema = z.toJSONSchema(def.input)`, converted eagerly in `tool()`/`defineTools()` and cached per schema. Missing `z.toJSONSchema` throws `NextWebMCPError("ZOD_TO_JSON_SCHEMA_UNSUPPORTED")` at definition time, not in render. Test stubs `zod.toJSONSchema` to `undefined`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | B4  | Validation + agent errors   | Invalid input returns `Invalid input for <name>: <path>: <message>; … Fix the arguments and call again.` Thrown errors return `<name> failed: <message>. Check the page state and try again.` No stack traces in results.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -86,20 +91,20 @@ Cross-cutting: dev `console.warn` once for `TOOL_NAME_DUPLICATE`; `TOOL_NAME_INV
 
 ## 4. Demo tools (examples/commerce)
 
-| Route                             | Tool                   | Kind                        | Server action / behavior                              |
-| --------------------------------- | ---------------------- | --------------------------- | ----------------------------------------------------- |
-| `/` (root layout)                 | `search_products`      | readOnly                    | product search, returns handle/title/price/variants   |
-| `/`                               | `get_cart`             | readOnly                    | current cart lines and totals                         |
-| `/`                               | `navigate_to`          | navigation                  | returns first, then `router.push(path)`               |
-| `/`                               | `update_quantity`      | mutation                    | `updateItemQuantity`                                  |
-| `/`                               | `remove_item`          | mutation                    | `removeItem`                                          |
-| `/`                               | `start_checkout`       | **confirm**                 | checkout URL, then push after returning               |
-| `/product/[handle]`               | `get_product`          | readOnly, uses `ctx.params` | product by handle                                     |
-| `/product/[handle]`               | `add_to_cart`          | mutation, uses `ctx.params` | `addItem(variantId, quantity)`                        |
-| `/search`, `/search/[collection]` | `refine_results`       | navigation (search params)  | pushes `?q=&sort=` and returns the new result count   |
-| footer (all routes)               | `subscribe_newsletter` | declarative `<Form>`        | server action returning a message; `respondWith`      |
-| `/learn`                          | —                      | page                        | shows `useModelContextTools()` live with route labels |
-| `/.well-known/webmcp.json`        | —                      | route handler               | `createManifestHandler` over the same tool arrays     |
+| Route                             | Tool                   | Kind                          | Server action / behavior                                                                                                                     |
+| --------------------------------- | ---------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/` (root layout)                 | `search_products`      | readOnly                      | `searchProducts = toolAction(searchProductsInput, …)`; read with `unwrap()`; returns handle/title/price/options                              |
+| `/`                               | `get_cart`             | readOnly                      | current cart lines and totals                                                                                                                |
+| `/`                               | `navigate_to`          | navigation (`navigationTool`) | allowlist `/`, `/search` (+`q`), `/search/[collection]`, `/product/[handle]`, `/checkout`, `/learn`; returns first, then `router.push(href)` |
+| `/`                               | `update_quantity`      | mutation                      | `updateItemQuantity`                                                                                                                         |
+| `/`                               | `remove_item`          | mutation                      | `removeItem`                                                                                                                                 |
+| `/`                               | `start_checkout`       | **confirm**                   | checkout URL, then push after returning                                                                                                      |
+| `/product/[handle]`               | `get_product`          | readOnly, uses `ctx.params`   | product by handle                                                                                                                            |
+| `/product/[handle]`               | `add_to_cart`          | mutation, uses `ctx.params`   | `addItem(variantId, quantity)`                                                                                                               |
+| `/search`, `/search/[collection]` | `refine_results`       | navigation (search params)    | pushes `?q=&sort=` and returns the new result count                                                                                          |
+| footer (all routes)               | `subscribe_newsletter` | declarative `<Form>`          | `toolAction(newsletterInput, …)` behind a `FormData` action returning a message; `respondWith`                                               |
+| `/learn`                          | —                      | page                          | shows `useModelContextTools()` live with route labels                                                                                        |
+| `/.well-known/webmcp.json`        | —                      | route handler                 | `createManifestHandler` over the same tool arrays                                                                                            |
 
 The root layout also emits `<meta http-equiv="origin-trial" content={WEBMCP_ORIGIN_TRIAL_TOKEN}>` from
 `examples/commerce/lib/webmcp-origin-trial.ts`.
@@ -117,45 +122,55 @@ The root layout also emits `<meta http-equiv="origin-trial" content={WEBMCP_ORIG
 - [x] Flatten the repo: package at the root, `examples/commerce` + `examples/minimal` as workspace members
 - [x] 0.2 API cleanup items 4–6 (below) — 2026-09-04
 - [x] 0.2 API cleanup item 1, register by stable key (below) — 2026-09-05
+- [x] Delete the commerce cart bridge (follow-up of item 1): `createRootTools(cartApi)` /
+      `createProductTools(product, cartApi)` inside `useMemo`, `cartApiStub` for the manifest route — 2026-09-05
+- [x] `next-web-mcp/server` (`toolAction`) + `unwrap`, and `navigationTool` (items 7–8 below) — 2026-09-05
+- [x] Adopt them in both examples: commerce `searchProducts` / `subscribeToNewsletter` via `toolAction`,
+      `navigate_to` via `navigationTool` (hand-rolled `resolveDestination` removed); minimal `addTodo` via
+      `toolAction`, `navigate_to` over `/` and `/todos/[id]` — 2026-09-05
 - [ ] `pnpm build && pnpm typecheck && pnpm typecheck:examples && pnpm test` green on CI (Node 22 and 24)
 - [ ] Run the eval protocol and fill `docs/EVAL.md` from real logs
 - [ ] Record the < 3 min video (`docs/SUBMISSION.md` script)
-- [ ] Publish `next-webmcp@0.1.0` to npm (changeset present)
+- [ ] Publish `next-web-mcp@0.1.0` to npm (changeset present)
 
 ## 6. 0.2 — API cleanup
 
-Six changes identified after the first Chrome 150 run. Items 4–6 shipped on 2026-09-04 and item 1 on
-2026-09-05; all four are part of the contract. Items 2–3 are next.
+Six changes identified after the first Chrome 150 run, plus two helpers (7–8) added on 2026-09-05. Items 4–6
+shipped on 2026-09-04 and items 1, 7 and 8 on 2026-09-05; all six are part of the contract. Items 2–3 are
+next.
 
 | #   | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Status          |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
 | 1   | **Register by stable key.** Each tool is registered under an identity key (`name`, `title`, `description`, `inputSchema`, `annotations`) with its own `AbortController`; the `tools` array is diffed by name, so only a tool that appears, disappears or changes shape touches `document.modelContext`. `pathname`, `params`, `router` and the current `ToolDef` live in a ref the executor reads at call time, so navigation and new factory results never re-register. `registry.updateToolRoute` keeps the DevTools grouping current. Fewer `toolchange` events, no window where a tool is missing. | done 2026-09-05 |
 | 2   | **Flat `execute(input, ctx)`.** Replace the curried `execute: (ctx) => (input, opts) => …` with `execute(input, ctx)` where `ctx` carries `signal`. Simpler to write and to type; `tool()` keeps inference.                                                                                                                                                                                                                                                                                                                                                                                            | next            |
 | 3   | **`ctx.navigate(url)`.** A helper that records the tool's result, returns it, and pushes after the promise resolves — replacing the `setTimeout(() => ctx.router.push(url), 0)` idiom in every navigating tool.                                                                                                                                                                                                                                                                                                                                                                                        | next            |
-| 4   | **`next-webmcp/form` ships its JSX typings.** Global augmentation of `FormHTMLAttributes` / `InputHTMLAttributes` / `SelectHTMLAttributes` / `TextareaHTMLAttributes`; `ToolFormProps<R>` types `action` by its return value so `action={subscribe}` needs no cast; `respond` receives `R`.                                                                                                                                                                                                                                                                                                            | done 2026-09-04 |
+| 4   | **`next-web-mcp/form` ships its JSX typings.** Global augmentation of `FormHTMLAttributes` / `InputHTMLAttributes` / `SelectHTMLAttributes` / `TextareaHTMLAttributes`; `ToolFormProps<R>` types `action` by its return value so `action={subscribe}` needs no cast; `respond` receives `R`.                                                                                                                                                                                                                                                                                                           | done 2026-09-04 |
 | 5   | **`<ModelContext>` renders the approval UI.** New `confirmations?: boolean` (default `true`); the outermost instance renders `<ToolConfirmations/>`, nested ones do not. A confirm with no renderer subscribed rejects at once with `CONFIRM_NO_RENDERER` instead of hanging 60 s.                                                                                                                                                                                                                                                                                                                     | done 2026-09-04 |
-| 6   | **Manifest as a route handler.** The config entry (the `next.config` wrapper that synchronously wrote to `public/`) is removed; `next-webmcp/manifest` adds `buildManifest` and `createManifestHandler`, built from the same `ToolDef[]` arrays, served at `/.well-known/webmcp.json`.                                                                                                                                                                                                                                                                                                                 | done 2026-09-04 |
+| 6   | **Manifest as a route handler.** The config entry (the `next.config` wrapper that synchronously wrote to `public/`) is removed; `next-web-mcp/manifest` adds `buildManifest` and `createManifestHandler`, built from the same `ToolDef[]` arrays, served at `/.well-known/webmcp.json`.                                                                                                                                                                                                                                                                                                                | done 2026-09-04 |
+| 7   | **`next-web-mcp/server`: `toolAction(input, handler, { output?, onError? })`.** Wraps a server action so the server re-validates with the same Zod schema, never throws, and resolves to `ToolActionResult` (`{ ok: true, data }` / `{ ok: false, error }`) with the same `Invalid input: …` wording as `<ModelContext>`; thrown errors are logged and reported as a generic sentence unless `onError` maps them. `unwrap()` on the main entry rethrows the error inside `execute` so the agent reads it. Server-safe entry, no React.                                                                 | done 2026-09-05 |
+| 8   | **`navigationTool({ routes })`.** A `navigate_to` tool built from an allowlist of App Router patterns: `route` is an enum, `params` fill the `[segment]`s (presence checked, optional Zod `params`/`query` schemas listed in the description), every value `encodeURIComponent`-encoded, `Navigating to <href>.` returned first and `router.push` in `setTimeout(…, 0)`. Replaces the hand-rolled `resolveDestination` in the commerce demo. Real function under `react-server`.                                                                                                                       | done 2026-09-05 |
 
-Follow-up from item 1 (not done): the cart bridge in `examples/commerce` (`publishCartBridge` / `readCartBridge`
-in `app/tools.ts`, fed from `<CartTools>` in a layout effect) exists only because rebuilding the root tools per
-render used to re-register them. With identity-keyed registration a factory such as `createRootTools(cartApi)`
+Follow-up from item 1 (done 2026-09-05): the cart bridge in `examples/commerce` (`publishCartBridge` /
+`readCartBridge` in `app/tools.ts`, fed from `<CartTools>` in a layout effect) existed only because rebuilding
+the root tools per render used to re-register them. With identity-keyed registration `createRootTools(cartApi)`
 inside `useMemo` is safe — the new closure is picked up on the next call without a re-registration — so the
-bridge and its layout effect can be deleted and the root tools can read `cartApi` directly.
+bridge and its layout effect were deleted; the root and product tools read `cartApi` directly, and the manifest
+route passes `cartApiStub` (`lib/mock/cart-api-stub.ts`) because it only needs names, descriptions and schemas.
 
 ## 7. Risks and open questions
 
-| Risk                                       | Detail                                                                                                                                                   | Mitigation                                                                                                                                                       |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `respondWith` + React forms                | React 19 owns form submission; `next/form` may intercept before our `onSubmit`. `e.nativeEvent.respondWith` must be called synchronously in the handler. | Call `preventDefault()` and `respondWith()` inside `onSubmit` before any async work; verified in Chrome 150.                                                     |
-| `executeTool` returns `null` on navigation | Tools that `router.push` before returning lose their result.                                                                                             | Documented rule: return the string, then push in `setTimeout(…, 0)`. DevTools shows "navigated (null)". Item 3 above removes the idiom.                          |
-| Zod 3 fallback                             | Zod 3.x has no `z.toJSONSchema` on its root export.                                                                                                      | Peer range is `zod@^4`; `tool()`/`defineTools()` throw `ZOD_TO_JSON_SCHEMA_UNSUPPORTED` at definition time with an upgrade hint.                                 |
-| ChatGPT browser availability               | Native WebMCP support in the ChatGPT desktop browser cannot be verified on every judge's machine.                                                        | Origin trial covers Chrome without a flag; DevTools Run tab works with no external agent at all.                                                                 |
-| `useSearchParams` in `<ModelContext>`      | Reading search params in a client component can bail a static page out to CSR unless isolated in a Suspense boundary.                                    | `ctx.searchParams` is read from `window.location.search` when the tool runs; no hook, no bailout.                                                                |
-| In-flight executions after abort           | Chrome 153+ does not cancel running `execute` calls when the signal aborts.                                                                              | Forward the tool's signal; long actions check `signal.aborted` before side effects.                                                                              |
-| Identity key cost                          | A factory that builds new Zod schemas on every render misses the per-schema WeakMap cache, so `z.toJSONSchema` runs each time the `tools` array changes. | Wrap factories in `useMemo` keyed on their inputs (as the examples do); correctness does not depend on it.                                                       |
-| Manifest drift                             | A hand-written manifest goes stale as tools change.                                                                                                      | Built from the same `ToolDef[]` at request time; tools with data-dependent factories use the async form of the handler.                                          |
-| Ambient augmentation in `dist/form.d.ts`   | A dts bundler can drop `declare module "react"` blocks.                                                                                                  | Post-build grep; fall back to `dist/form-jsx.d.ts` referenced from `dist/form.d.ts`. Verified by typechecking the commerce example without its own augmentation. |
-| Origin trial expiry                        | Token stops working 2026-11-16 (Chrome 149–156).                                                                                                         | Documented; re-register or rely on the flag after that date.                                                                                                     |
+| Risk                                       | Detail                                                                                                                                                   | Mitigation                                                                                                                                                                                               |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `respondWith` + React forms                | React 19 owns form submission; `next/form` may intercept before our `onSubmit`. `e.nativeEvent.respondWith` must be called synchronously in the handler. | Call `preventDefault()` and `respondWith()` inside `onSubmit` before any async work; verified in Chrome 150.                                                                                             |
+| `executeTool` returns `null` on navigation | Tools that `router.push` before returning lose their result.                                                                                             | Documented rule: return the string, then push in `setTimeout(…, 0)`; `navigationTool` (item 8) does it for page navigation. DevTools shows "navigated (null)". Item 3 above removes the idiom elsewhere. |
+| Zod 3 fallback                             | Zod 3.x has no `z.toJSONSchema` on its root export.                                                                                                      | Peer range is `zod@^4`; `tool()`/`defineTools()` throw `ZOD_TO_JSON_SCHEMA_UNSUPPORTED` at definition time with an upgrade hint.                                                                         |
+| ChatGPT browser availability               | Native WebMCP support in the ChatGPT desktop browser cannot be verified on every judge's machine.                                                        | Origin trial covers Chrome without a flag; DevTools Run tab works with no external agent at all.                                                                                                         |
+| `useSearchParams` in `<ModelContext>`      | Reading search params in a client component can bail a static page out to CSR unless isolated in a Suspense boundary.                                    | `ctx.searchParams` is read from `window.location.search` when the tool runs; no hook, no bailout.                                                                                                        |
+| In-flight executions after abort           | Chrome 153+ does not cancel running `execute` calls when the signal aborts.                                                                              | Forward the tool's signal; long actions check `signal.aborted` before side effects.                                                                                                                      |
+| Identity key cost                          | A factory that builds new Zod schemas on every render misses the per-schema WeakMap cache, so `z.toJSONSchema` runs each time the `tools` array changes. | Wrap factories in `useMemo` keyed on their inputs (as the examples do); correctness does not depend on it.                                                                                               |
+| Manifest drift                             | A hand-written manifest goes stale as tools change.                                                                                                      | Built from the same `ToolDef[]` at request time; tools with data-dependent factories use the async form of the handler.                                                                                  |
+| Ambient augmentation in `dist/form.d.ts`   | A dts bundler can drop `declare module "react"` blocks.                                                                                                  | Post-build grep; fall back to `dist/form-jsx.d.ts` referenced from `dist/form.d.ts`. Verified by typechecking the commerce example without its own augmentation.                                         |
+| Origin trial expiry                        | Token stops working 2026-11-16 (Chrome 149–156).                                                                                                         | Documented; re-register or rely on the flag after that date.                                                                                                                                             |
 
 ## 8. Engineering standards
 
@@ -177,5 +192,5 @@ bridge and its layout effect can be deleted and the root tools can read `cartApi
 - The sample prompt (search → open product → add to cart → checkout with approval) succeeds end-to-end in
   Chrome with the DevTools panel showing the tool swap on navigation.
 - `docs/EVAL.md` results section filled from real runs, or explicitly left at "0 runs".
-- `next-webmcp@0.1.0` publishable: `pnpm build` produces `dist/` with types, the `"use client"` directives
+- `next-web-mcp@0.1.0` publishable: `pnpm build` produces `dist/` with types, the `"use client"` directives
   on client entries, and the JSX augmentation in `dist/form.d.ts`.

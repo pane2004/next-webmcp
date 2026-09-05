@@ -45,7 +45,7 @@ const noop = tool({
 });
 
 const NO_RENDERER_RESULT =
-  'checkout failed: [next-webmcp] Tool "checkout" needs approval but no <ToolConfirmations/> is mounted. ' +
+  'checkout failed: [next-web-mcp] Tool "checkout" needs approval but no <ToolConfirmations/> is mounted. ' +
   "Keep the default confirmations on <ModelContext>, or mount <ToolConfirmations/> yourself. " +
   "Check the page state and try again.";
 
@@ -172,7 +172,10 @@ describe("confirmations", () => {
 
   it("denies pending confirmations when the ModelContext unmounts", async () => {
     const { unmount } = render(<ModelContext tools={[checkout]} />);
-    const promise = fake.executeTool("checkout", JSON.stringify({ total: 1 }));
+    let promise!: Promise<unknown>;
+    await act(async () => {
+      promise = fake.executeTool("checkout", JSON.stringify({ total: 1 }));
+    });
     expect(registry.getState().confirmations).toHaveLength(1);
     unmount();
     await expect(promise).resolves.toBe("User declined checkout.");

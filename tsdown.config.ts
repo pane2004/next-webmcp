@@ -3,8 +3,9 @@ import { defineConfig } from "tsdown";
 /**
  * Each client entry (`src/index.ts`, `src/form.tsx`, `src/devtools.tsx`) starts with a
  * `"use client"` directive; rolldown hoists the entry module's directive to the top of the
- * emitted chunk, so no banner is needed (a banner would duplicate it). `src/manifest.ts` and
- * `src/internal.ts` carry no directive: they are server-safe and must stay free of React.
+ * emitted chunk, so no banner is needed (a banner would duplicate it). `src/manifest.ts`,
+ * `src/server.ts` and `src/internal.ts` carry no directive: they are server-safe and must stay
+ * free of React.
  */
 /**
  * `src/index.server.ts` (the `react-server` build of the main entry) re-exports the components
@@ -13,7 +14,7 @@ import { defineConfig } from "tsdown";
  * chunk without it: that is what keeps them client references in the Server Components layer.
  */
 const keepIndexChunkImport = {
-  name: "next-webmcp:keep-index-chunk-import",
+  name: "next-web-mcp:keep-index-chunk-import",
   resolveId(id: string, importer: string | undefined) {
     if (id === "./index.js" && importer && /src[\\/]index\.server\.ts$/.test(importer)) {
       return { id, external: true };
@@ -30,6 +31,7 @@ export default defineConfig({
     form: "src/form.tsx",
     devtools: "src/devtools.tsx",
     manifest: "src/manifest.ts",
+    server: "src/server.ts",
     internal: "src/internal.ts",
   },
   format: ["esm"],

@@ -38,3 +38,27 @@ export function toolInputToJsonSchema(schema: z.ZodTypeAny): object {
   cache.set(schema, rest);
   return rest;
 }
+
+/** The part of a Zod issue this package reads: where it happened and why. */
+export type ZodIssueLike = { readonly path: ReadonlyArray<PropertyKey>; readonly message: string };
+
+/**
+ * Formats Zod issues as `path: message` pairs joined by `; ` (nested paths are dotted, a
+ * top-level issue reads `(root)`). `<ModelContext>` and `toolAction()` both use it, so an agent
+ * sees the same wording whether the client or the server rejected the arguments.
+ *
+ * @example
+ * ```ts
+ * formatZodIssues(z.object({ q: z.string().min(1) }).safeParse({ q: "" }).error!.issues);
+ * // → "q: Too small: expected string to have >=1 characters"
+ * ```
+ * @internal
+ */
+export function formatZodIssues(issues: ReadonlyArray<ZodIssueLike>): string {
+  return issues
+    .map(
+      (issue) =>
+        `${issue.path.length ? issue.path.map(String).join(".") : "(root)"}: ${issue.message}`,
+    )
+    .join("; ");
+}

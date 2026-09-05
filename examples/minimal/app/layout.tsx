@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "next-webmcp minimal example",
-  description: "Two WebMCP tools, one confirm card, one manifest.",
+  title: "next-web-mcp minimal example",
+  description: "Three WebMCP tools, one confirm card, one manifest.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

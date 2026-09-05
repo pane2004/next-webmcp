@@ -1,5 +1,5 @@
 ---
-"next-webmcp": minor
+"next-web-mcp": minor
 ---
 
 Require Node 22 or newer (`engines.node >= 22`). Node 20 reached end of life in April 2026, and the

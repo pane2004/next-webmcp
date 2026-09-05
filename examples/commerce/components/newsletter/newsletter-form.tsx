@@ -1,6 +1,6 @@
 "use client";
 
-import Form from "next-webmcp/form";
+import Form from "next-web-mcp/form";
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { subscribeToNewsletter } from "app/actions";

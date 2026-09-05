@@ -32,7 +32,7 @@ button {
 }
 
 /* WebMCP: highlight a declarative tool form while a browser agent fills it in.
-   next-webmcp/form sets data-tool-active on the <form> between the browser's
+   next-web-mcp/form sets data-tool-active on the <form> between the browser's
    toolactivated and toolcancel/submit events. (The native :tool-form-active /
    :tool-submit-active pseudo-classes are not used here because the CSS parser
    used by Tailwind v4 rejects unknown pseudo-classes and fails the whole build.) */

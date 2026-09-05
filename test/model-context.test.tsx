@@ -354,6 +354,28 @@ describe("<ModelContext>", () => {
     expect(registry.getState().calls[0]).toMatchObject({ name: "echo", ok: false, route: "/" });
   });
 
+  it("parses asynchronously, so a schema with async refinements works in the browser too", async () => {
+    const claim = tool({
+      name: "claim",
+      description: "Claims a handle",
+      input: z.object({
+        handle: z.string().refine(async (h) => h !== "taken", { message: "Handle is taken" }),
+      }),
+      execute:
+        () =>
+        async ({ handle }) =>
+          `claimed ${handle}`,
+    });
+    render(<ModelContext tools={[claim]} />);
+    await expect(fake.executeTool("claim", JSON.stringify({ handle: "free" }))).resolves.toBe(
+      "claimed free",
+    );
+    await expect(fake.executeTool("claim", JSON.stringify({ handle: "taken" }))).resolves.toBe(
+      "Invalid input for claim: handle: Handle is taken. Fix the arguments and call again.",
+    );
+    expect(registry.getState().calls[0]).toMatchObject({ name: "claim", ok: false });
+  });
+
   it("JSON-stringifies object results", async () => {
     const obj = tool({
       name: "obj",

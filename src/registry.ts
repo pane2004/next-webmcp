@@ -101,7 +101,7 @@ export const registry = {
     if (owners.has(name)) {
       warnOnce(
         `TOOL_NAME_DUPLICATE:${name}`,
-        `[next-webmcp] TOOL_NAME_DUPLICATE: tool "${name}" is registered by more than one <ModelContext>. The later registration wins.`,
+        `[next-web-mcp] TOOL_NAME_DUPLICATE: tool "${name}" is registered by more than one <ModelContext>. The later registration wins.`,
       );
     }
     const owner = Symbol(name);
@@ -168,7 +168,7 @@ export const registry = {
       timer = setTimeout(() => {
         warnOnce(
           "CONFIRM_TIMEOUT",
-          `[next-webmcp] CONFIRM_TIMEOUT: "${toolName}" was not approved within 60 s and was denied.`,
+          `[next-web-mcp] CONFIRM_TIMEOUT: "${toolName}" was not approved within 60 s and was denied.`,
         );
         resolve(false);
       }, CONFIRM_TIMEOUT_MS);

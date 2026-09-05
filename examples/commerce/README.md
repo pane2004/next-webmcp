@@ -1,6 +1,6 @@
 # example-commerce
 
-The next-webmcp demo storefront, deployed at **https://next-webmcp-commerce.vercel.app**. A fork of
+The next-web-mcp demo storefront, deployed at **https://next-webmcp-commerce.vercel.app**. A fork of
 [vercel/commerce](https://github.com/vercel/commerce) (see [LICENSE.vercel-commerce.md](./LICENSE.vercel-commerce.md))
 with WebMCP tools on every route:
 
@@ -9,7 +9,7 @@ with WebMCP tools on every route:
 | `/` (root layout)                 | `search_products`, `get_cart`, `navigate_to`, `update_quantity`, `remove_item`, `start_checkout` (confirm) |
 | `/product/[handle]`               | `get_product`, `add_to_cart`                                                                               |
 | `/search`, `/search/[collection]` | `refine_results`                                                                                           |
-| footer (all routes)               | `subscribe_newsletter` (declarative `next-webmcp/form`)                                                    |
+| footer (all routes)               | `subscribe_newsletter` (declarative `next-web-mcp/form`)                                                   |
 | `/learn`                          | page listing the tools registered right now                                                                |
 | `/.well-known/webmcp.json`        | manifest served by `createManifestHandler`                                                                 |
 
@@ -28,7 +28,7 @@ point the same UI at a real Shopify store.
 
 ```sh
 pnpm install                 # from the repo root
-pnpm build                   # builds next-webmcp into dist/, which this app links to
+pnpm build                   # builds next-web-mcp into dist/, which this app links to
 pnpm example:commerce        # http://localhost:3000
 ```
 

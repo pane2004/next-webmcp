@@ -1,6 +1,6 @@
 "use client";
 
-import { ModelContext } from "next-webmcp";
+import { ModelContext } from "next-web-mcp";
 import type { Collection } from "lib/shopify/types";
 import { useMemo } from "react";
 import { createSearchTools } from "./tools";

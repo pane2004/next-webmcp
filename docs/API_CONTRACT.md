@@ -1,4 +1,4 @@
-# next-webmcp — public API contract (v0.1.0, revised 2026-09-05)
+# next-web-mcp — public API contract (v0.1.0, revised 2026-09-05)
 
 This is the single source of truth for the package surface. Library authors implement exactly this;
 app authors and doc authors code against exactly this. Do not invent extra exports.
@@ -22,21 +22,23 @@ signal); `executeTool()` accepts only the `RegisteredTool` object from `getTools
 ## Entry points
 
 ```
-next-webmcp            (client-safe; file starts with "use client")
-next-webmcp/form       ("use client"; ships the JSX typings for the WebMCP attributes)
-next-webmcp/devtools   ("use client"; dev-only; returns null in production)
-next-webmcp/manifest   (server-safe: no React, no "use client"; buildManifest + createManifestHandler)
-next-webmcp/internal   (test-only: __resetForTests, registry store)
+next-web-mcp            (client-safe; file starts with "use client")
+next-web-mcp/form       ("use client"; ships the JSX typings for the WebMCP attributes)
+next-web-mcp/devtools   ("use client"; dev-only; returns null in production)
+next-web-mcp/manifest   (server-safe: no React, no "use client"; buildManifest + createManifestHandler)
+next-web-mcp/server     (server-safe: no React, no "use client"; toolAction for the server side of a tool)
+next-web-mcp/internal   (test-only: __resetForTests, registry store)
 ```
 
 There is no config entry point (the old `next.config` wrapper is gone). The manifest is served by a route handler, not written to `public/`.
 
-Under the `react-server` export condition (Server Components, route handlers, server actions) `next-webmcp` resolves to
-`dist/index.server.js`, which carries no `"use client"` directive: `tool`, `defineTools`, `NextWebMCPError` and
-`isModelContextAvailable` are the real functions there (so a `tools.ts` module can be shared with `createManifestHandler`),
-while the components and hooks are re-exported from the `"use client"` chunk and stay client references.
+Under the `react-server` export condition (Server Components, route handlers, server actions) `next-web-mcp` resolves to
+`dist/index.server.js`, which carries no `"use client"` directive: `tool`, `defineTools`, `navigationTool`, `unwrap`,
+`NextWebMCPError` and `isModelContextAvailable` are the real functions there (so a `tools.ts` module can be shared with
+`createManifestHandler`), while the components and hooks are re-exported from the `"use client"` chunk and stay client
+references.
 
-## `next-webmcp`
+## `next-web-mcp`
 
 ```ts
 import type { z } from "zod";
@@ -78,6 +80,27 @@ export type ToolDef<TInput extends z.ZodTypeAny = z.ZodTypeAny> = {
 
 export function tool<TInput extends z.ZodTypeAny>(def: ToolDef<TInput>): ToolDef<TInput>;
 export function defineTools(map: Record<string, ToolDef<any>>): ToolDef[]; // fills name from key if missing
+
+/** One page an agent may open through navigationTool(). `path` is an App Router pattern. */
+export type NavigationRoute = {
+  path: string; // "/", "/product/[handle]", "/docs/[...slug]", "/docs/[[...slug]]"
+  description: string; // read by the agent
+  params?: z.ZodObject<any>; // extra validation for the [segment] values (presence is always checked)
+  query?: z.ZodObject<any>; // validation for `query`; its keys are listed in the description
+};
+/** Builds an ordinary ToolDef (via tool()) named `navigate_to` from an allowlist of routes. See "navigationTool semantics". */
+export function navigationTool(options: {
+  routes: NavigationRoute[]; // at least one, else NextWebMCPError TOOL_NAME_INVALID
+  name?: string; // default "navigate_to"
+  description?: string; // leading sentence; default "Open another page of this site."
+  replace?: boolean; // router.replace instead of router.push; default false
+  scroll?: boolean; // forwarded to the router as { scroll } when set
+}): ToolDef;
+
+/** What a toolAction() server action resolves to (see next-web-mcp/server). Exported from both entries. */
+export type ToolActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
+/** result.data, or throws new Error(result.error) — inside execute the agent then reads `<name> failed: <error>. …`. */
+export function unwrap<T>(result: ToolActionResult<T>): T;
 
 export type ModelContextProps = {
   tools: ToolDef[];
@@ -125,7 +148,7 @@ export class NextWebMCPError extends Error {
 
 Execution semantics inside `ModelContext` (per call; `def` and `ctx` are the latest definition and route context at the time of the call, see Registration semantics):
 
-1. Parse raw input with `def.input.safeParse`. On failure return
+1. Parse raw input with `await def.input.safeParseAsync` (so async refinements work in a schema shared with `toolAction`). On failure return
    `Invalid input for <name>: <issue path>: <message>; ... Fix the arguments and call again.`
 2. If `confirm` is set: build a `ConfirmRequest` (boolean → `{ title: <title ?? name>, details: <args as label/value> }`).
    If the registry has no pending-confirmation listener (nothing mounted to render the card), reject immediately with
@@ -160,7 +183,7 @@ Registration semantics (register by stable key, since 2026-09-05):
 - Duplicate names across nested `ModelContext`s: dev `console.warn` once (`TOOL_NAME_DUPLICATE`); the registration that
   lands last wins (Chrome replaces same-name tools). Instances mounted in the same commit register child-first (React runs
   inner effects before outer ones), so the outer definition wins; an inner instance mounted in a later commit wins. Pinned by tests.
-- No `document.modelContext`: `console.info` once (`[next-webmcp] document.modelContext is unavailable…`) and no-op. Never throw in render or effects.
+- No `document.modelContext`: `console.info` once (`[next-web-mcp] document.modelContext is unavailable…`) and no-op. Never throw in render or effects.
 - Feature detection helper `isModelContextAvailable()` is exported too.
 
 Confirm UI:
@@ -172,7 +195,7 @@ Confirm UI:
   nothing extra. `confirmations={false}` on the outermost instance opts out so the app can place `<ToolConfirmations/>` itself.
 - The registry exposes the count of pending-confirmation subscribers; step 2 above uses it.
 
-## `next-webmcp/form`
+## `next-web-mcp/form`
 
 ```ts
 import type { FormProps } from "next/form";
@@ -215,7 +238,7 @@ Behavior: renders `next/form`'s `Form` with the WebMCP attributes spread onto th
 If `action` is a string URL, fall back to native submit. Sets `data-tool-active` while `toolactivated` for this `toolname` until `toolcancel`/submit.
 If the dts bundler drops the ambient augmentation, ship it as `dist/form-jsx.d.ts` referenced from `dist/form.d.ts`.
 
-## `next-webmcp/devtools`
+## `next-web-mcp/devtools`
 
 ```ts
 export type WebMCPDevToolsProps = {
@@ -233,10 +256,10 @@ Panel: (a) Tools tab — live list from `getTools()` (refresh on `toolchange`), 
 (c) Calls — `useToolCalls()` log with args, ms, result; (d) "Copy prompt" button per tool that copies a natural-language prompt derived from the schema.
 Inline styles / CSS variables only, no global CSS. Zero dependencies.
 
-## `next-webmcp/manifest`
+## `next-web-mcp/manifest`
 
 ```ts
-import type { ToolAnnotations, ToolDef } from "next-webmcp";
+import type { ToolAnnotations, ToolDef } from "next-web-mcp";
 
 export type ManifestTool = {
   name: string;
@@ -272,7 +295,61 @@ export const GET = createManifestHandler(async () => ({
 Server-safe: no React import, no `"use client"`, not in `CLIENT_ENTRIES` of `tsdown.config.ts`. Route order in the output
 follows the object's key order; tool order follows the array. Nothing is written to `public/`.
 
-## `next-webmcp/internal`
+`navigationTool` semantics (`src/navigation-tool.ts`; pinned by `test/navigation-tool.test.tsx`):
+
+- Input schema: `{ route: z.enum(paths), params?: z.record(z.string(), z.string()), query?: z.record(z.string(), z.string()) }`.
+  No `annotations` (the tool changes the page). `name` is validated by `tool()`; empty `routes` throws
+  `NextWebMCPError("TOOL_NAME_INVALID")` at definition time.
+- Description: `<options.description ?? "Open another page of this site.">\nRoutes:\n- <path> — <description> Needs params: a, b. Optional params: slug. Query: q; optional: sort.`
+  — one `- ` line per route; `Needs params:` lists the non-optional `[segment]`s, `Optional params:` the `[[...name]]` ones,
+  `Query:` the keys of `query` (required first, then `optional: …`). Notes are omitted when empty.
+- `execute`, in order: unknown `route` (only reachable when called directly; `<ModelContext>` rejects it as `Invalid input for
+<name>: route: …`) → `Unknown route "<route>". Available: <paths joined by ", ">.`; a non-optional segment with no value
+  (missing, empty, or a catch-all of only `/`) → `Route "<path>" needs params: <names>.`; `route.params.safeParse` fails →
+  `Invalid params for route "<path>": <path>: <message>; … Fix the arguments and call again.`; `route.query.safeParse` fails →
+  `Invalid query for route "<path>": …. Fix the arguments and call again.`. Otherwise the href is built (plain segments
+  `encodeURIComponent`-encoded whole; catch-all values split on `/`, empty pieces dropped, each piece encoded; `[[...name]]`
+  without a value removes the segment; query appended with `URLSearchParams`), the tool returns `Navigating to <href>.` and
+  calls `router.push(href, scroll === undefined ? undefined : { scroll })` (or `router.replace`) in `setTimeout(…, 0)`.
+- Without `params`/`query` schemas the values pass through unchecked apart from segment presence.
+
+## `next-web-mcp/server`
+
+```ts
+import type { z } from "zod";
+
+export type ToolActionResult<T> = { ok: true; data: T } | { ok: false; error: string }; // same type as the main entry
+
+export type ToolActionOptions<S extends z.ZodTypeAny, R> = {
+  output?: z.ZodType<R>; // checks the handler's result; on success the parsed value is returned
+  onError?: (error: unknown) => string; // maps a thrown error to the sentence the agent reads
+};
+
+/** Wraps a server action; the returned async function is the action. Parses with safeParseAsync. Never throws. */
+export function toolAction<S extends z.ZodTypeAny, R>(
+  input: S,
+  handler: (input: z.infer<S>) => Promise<R> | R,
+  options?: ToolActionOptions<S, R>,
+): (raw: unknown) => Promise<ToolActionResult<R>>;
+```
+
+Semantics (`src/server.ts`; pinned by `test/server.test.ts`):
+
+1. `await input.safeParseAsync(raw)`; on failure resolve `{ ok: false, error: "Invalid input: <path>: <message>; … Fix the arguments and call again." }`
+   using the same `formatZodIssues` as `<ModelContext>` (`(root)` for an empty path). The handler does not run.
+2. `await handler(parsed.data)`; if it throws: `console.error(err)`, then `{ ok: false, error: onError?.(err) ?? "The action failed on the server. Try again." }`.
+   The thrown message is never returned unless `onError` returns it; if `onError` throws, that error is logged and the generic sentence is used.
+   A non-Zod error thrown by a `.transform`/`.refine` body during the input or output parse (Zod 4 rethrows those from
+   `safeParseAsync`) takes the same path, so the action never rejects.
+3. With `output`: `await output.safeParseAsync(result)`; on failure `console.error("[next-web-mcp] toolAction: the handler's result failed the output schema: …")`
+   and `{ ok: false, error: "The server returned an unexpected result." }`; on success `{ ok: true, data: checked.data }`.
+4. Without `output`: `{ ok: true, data: result }`.
+
+Server-safe: no React, no `"use client"`, no `document`/`window`. The result is a plain object (serializable across the
+server-action boundary). `unwrap` lives on the main entry (and is a real function under `react-server`) so tools call it
+without importing the server entry.
+
+## `next-web-mcp/internal`
 
 ```ts
 export function __resetForTests(): void;

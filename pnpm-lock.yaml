@@ -68,7 +68,7 @@ importers:
       next:
         specifier: 15.6.0-canary.60
         version: 15.6.0-canary.60(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      next-webmcp:
+      next-web-mcp:
         specifier: workspace:*
         version: link:../..
       react:
@@ -126,7 +126,7 @@ importers:
       next:
         specifier: 16.3.4
         version: 16.3.4(@types/node@22.13.10)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      next-webmcp:
+      next-web-mcp:
         specifier: workspace:*
         version: link:../..
       react:

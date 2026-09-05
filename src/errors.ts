@@ -1,5 +1,5 @@
 /**
- * Stable error codes surfaced by next-webmcp.
+ * Stable error codes surfaced by next-web-mcp.
  *
  * @see https://github.com/pane2004/next-webmcp#errors
  */
@@ -12,7 +12,7 @@ export type NextWebMCPErrorCode =
   | "CONFIRM_NO_RENDERER";
 
 /**
- * Error thrown (or logged) by next-webmcp. Every instance carries a stable `code`
+ * Error thrown (or logged) by next-web-mcp. Every instance carries a stable `code`
  * so callers can branch without parsing messages.
  *
  * @example
@@ -31,7 +31,7 @@ export class NextWebMCPError extends Error {
   readonly code: NextWebMCPErrorCode;
 
   constructor(code: NextWebMCPErrorCode, message: string) {
-    super(`[next-webmcp] ${message}`);
+    super(`[next-web-mcp] ${message}`);
     this.name = "NextWebMCPError";
     this.code = code;
   }

@@ -1,5 +1,5 @@
 {
-  "name": "next-webmcp",
+  "name": "next-web-mcp",
   "version": "0.1.0",
   "description": "Route-scoped WebMCP tools for the Next.js App Router: expose server actions as tools agents can call, with inline human approval and DevTools.",
   "type": "module",
@@ -36,6 +36,11 @@
       "import": "./dist/manifest.js",
       "default": "./dist/manifest.js"
     },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js",
+      "default": "./dist/server.js"
+    },
     "./internal": {
       "types": "./dist/internal.d.ts",
       "import": "./dist/internal.js",
@@ -53,6 +58,9 @@
       ],
       "manifest": [
         "./dist/manifest.d.ts"
+      ],
+      "server": [
+        "./dist/server.d.ts"
       ],
       "internal": [
         "./dist/internal.d.ts"

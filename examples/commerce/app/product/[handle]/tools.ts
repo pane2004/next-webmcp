@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { defineTools, tool, type ToolDef } from "next-webmcp";
+import { defineTools, tool, type ToolDef } from "next-web-mcp";
 import { addItem, updateItemQuantity } from "components/cart/actions";
 import { DEFAULT_OPTION } from "lib/constants";
 import type { Product, ProductOption, ProductVariant } from "lib/shopify/types";
-import { formatAmount, readCartBridge, runCartTransition } from "app/tools";
+import { formatAmount, runCartTransition, type CartApi } from "lib/cart-tools-helpers";
 
 /** Options that carry real choices (Shopify's placeholder "Title" option is skipped). */
 function realOptions(product: Product): ProductOption[] {
@@ -137,13 +137,17 @@ export function resolveVariant(
 /**
  * Builds the tools that only make sense on a product page. Register them with
  * `<ModelContext>` from a client component so they swap in and out with the route.
+ * `add_to_cart` closes over `cartApi`, so rebuild the tools whenever `useCart()`
+ * returns a new value; the tool identity stays the same, so nothing re-registers.
  *
  * @example
- * const tools = useMemo(() => createProductTools(product), [product]);
+ * const cartApi = useCart();
+ * const tools = useMemo(() => createProductTools(product, cartApi), [product, cartApi]);
  * <ModelContext tools={tools} />
  * @see app/product/[handle]/product-tools.tsx
+ * @see lib/mock/cart-api-stub.ts for the manifest route, which has no React tree
  */
-export function createProductTools(product: Product): ToolDef[] {
+export function createProductTools(product: Product, cartApi: CartApi): ToolDef[] {
   return defineTools({
     get_product: tool({
       description:
@@ -202,7 +206,7 @@ export function createProductTools(product: Product): ToolDef[] {
         if (resolved.kind === "error") return resolved.message;
 
         const { variant, options } = resolved;
-        const { cart, addCartItem } = readCartBridge();
+        const { cart, addCartItem } = cartApi;
         const existing =
           cart?.lines.find((line) => line.merchandise.id === variant.id)?.quantity ?? 0;
 

@@ -1,4 +1,3 @@
-import Footer from "components/layout/footer";
 import Price from "components/price";
 import { DEFAULT_OPTION } from "lib/constants";
 import { getCart } from "lib/shopify";
@@ -21,14 +20,11 @@ export default async function CheckoutPage(props: { searchParams?: Promise<{ ord
   const { order } = (await props.searchParams) ?? {};
 
   return (
-    <>
-      <div className="mx-auto max-w-(--breakpoint-2xl) px-4">
-        <div className="mx-auto max-w-2xl rounded-lg border border-neutral-200 bg-white p-8 md:p-12 dark:border-neutral-800 dark:bg-black">
-          {order ? <OrderPlaced orderId={order} /> : <CartSummary />}
-        </div>
+    <div className="mx-auto max-w-(--breakpoint-2xl) px-4">
+      <div className="mx-auto max-w-2xl rounded-lg border border-neutral-200 bg-white p-8 md:p-12 dark:border-neutral-800 dark:bg-black">
+        {order ? <OrderPlaced orderId={order} /> : <CartSummary />}
       </div>
-      <Footer />
-    </>
+    </div>
   );
 }
 

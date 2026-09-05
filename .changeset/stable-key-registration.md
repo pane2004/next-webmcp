@@ -1,5 +1,5 @@
 ---
-"next-webmcp": minor
+"next-web-mcp": minor
 ---
 
 `<ModelContext>` registers tools by identity instead of once per mount.

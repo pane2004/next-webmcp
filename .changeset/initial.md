@@ -1,5 +1,5 @@
 ---
-"next-webmcp": minor
+"next-web-mcp": minor
 ---
 
 Initial release.
@@ -11,9 +11,9 @@ Initial release.
   `CONFIRM_NO_RENDERER` instead of hanging.
 - `<ToolConfirmations>` and the `confirm` option for human-in-the-loop approval.
 - `useToolCalls()` and `useModelContextTools()`.
-- `next-webmcp/form`: `next/form` wrapper answering agent submits with `respondWith`. `action` is typed by its
+- `next-web-mcp/form`: `next/form` wrapper answering agent submits with `respondWith`. `action` is typed by its
   return value (`ToolFormProps<R>`), and the JSX typings for `toolname`, `tooldescription`, `toolautosubmit`
   and `toolparamdescription` ship with the entry — no augmentation or cast in the app.
-- `next-webmcp/manifest`: `buildManifest` and `createManifestHandler` serve `/.well-known/webmcp.json` from a
+- `next-web-mcp/manifest`: `buildManifest` and `createManifestHandler` serve `/.well-known/webmcp.json` from a
   route handler using the same `ToolDef[]` arrays as the page.
-- `next-webmcp/devtools`: dev-only Tools / Run / Calls panel.
+- `next-web-mcp/devtools`: dev-only Tools / Run / Calls panel.

@@ -1,7 +1,7 @@
 "use client";
 
-import { ModelContext } from "next-webmcp";
-import { WebMCPDevTools } from "next-webmcp/devtools";
+import { ModelContext } from "next-web-mcp";
+import { WebMCPDevTools } from "next-web-mcp/devtools";
 import { tools } from "./tools";
 
 /**

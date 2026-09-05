@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping. The `next-webmcp` package lives at the repository root (`src/`, `test/`); the pnpm
+Thanks for helping. The `next-web-mcp` package lives at the repository root (`src/`, `test/`); the pnpm
 workspace also holds `examples/commerce` (the demo storefront) and `examples/minimal`.
 
 ## Setup
@@ -21,7 +21,7 @@ Node 22 or 24. No environment variables are needed; the demo runs against a mock
 3. `pnpm --filter example-commerce build` if you touched the demo.
 4. Add a changeset for user-visible changes to the package:
    `pnpm dlx @changesets/cli add` (or write `.changeset/<name>.md` by hand: frontmatter with
-   `"next-webmcp": patch | minor | major`, then a one-paragraph summary).
+   `"next-web-mcp": patch | minor | major`, then a one-paragraph summary).
 5. Public API changes go through `docs/API_CONTRACT.md` first; update `docs/api.md` in the same PR.
 
 CI runs the same steps on Node 22 and 24.

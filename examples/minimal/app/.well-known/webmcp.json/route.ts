@@ -1,4 +1,4 @@
-import { createManifestHandler } from "next-webmcp/manifest";
+import { createManifestHandler } from "next-web-mcp/manifest";
 import { tools } from "../../tools";
 
 /**

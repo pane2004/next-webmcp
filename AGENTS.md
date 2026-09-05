@@ -4,19 +4,21 @@ Guidance for coding agents (and humans) working in this repository.
 
 ## Repo map
 
-The `next-webmcp` package lives at the repository root. Examples are pnpm workspace members that depend on
-`"next-webmcp": "workspace:*"`.
+The `next-web-mcp` package lives at the repository root. Examples are pnpm workspace members that depend on
+`"next-web-mcp": "workspace:*"`.
 
 ```
-src/                      the package. index.ts, form.tsx, devtools.tsx, manifest.ts, internal.ts + helpers
+src/                      the package. index.ts (+ index.server.ts for the react-server condition), form.tsx,
+                          devtools.tsx, manifest.ts, server.ts (toolAction), navigation-tool.ts (navigationTool),
+                          action-result.ts (unwrap, ToolActionResult), internal.ts + helpers
 test/                     vitest + jsdom with a fake document.modelContext (fake-model-context.ts)
 examples/commerce/        demo storefront (vercel/commerce fork): app/, components/, lib/ (mock provider, tools)
-examples/minimal/         two-tool example on a fresh App Router app
+examples/minimal/         three-tool example on a fresh App Router app
 docs/API_CONTRACT.md      binding public API and verified Chrome spec facts — read before touching src/
 docs/api.md               reader-facing API reference (every export, signatures, examples)
 docs/IMPLEMENTATION_PLAN.md  behaviors B1–B12, build order, 0.2 API cleanup, risks
 docs/SUBMISSION.md, docs/EVAL.md
-skills/next-webmcp-adoption/  skill for adopting the library in another app
+skills/next-web-mcp-adoption/  skill for adopting the library in another app
 .github/workflows/ci.yml  prettier → build → typecheck (package + examples) → test → build commerce (Node 22/24)
 .changeset/               changesets config; add one for every user-visible change
 ```
@@ -28,7 +30,7 @@ pnpm install                     # once (uses the lockfile)
 pnpm build                       # package (tsdown) → dist/
 pnpm test | pnpm test:watch      # vitest
 pnpm typecheck                   # package
-pnpm typecheck:examples          # examples (build the package first; they resolve next-webmcp from dist/)
+pnpm typecheck:examples          # examples (build the package first; they resolve next-web-mcp from dist/)
 pnpm build:examples              # next build for every example
 pnpm example:commerce            # http://localhost:3000, mock mode, no env
 pnpm example:minimal
@@ -38,12 +40,16 @@ pnpm lint | pnpm format          # prettier --check . | prettier --write .
 ## Conventions
 
 - TypeScript strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`. No `any` in the public API.
-- `"use client"` is the first line of every client module. `src/manifest.ts` is server-safe: no React, no
-  directive. Never read `document` or `window` at module scope; feature-detect inside effects or handlers.
+- `"use client"` is the first line of every client module. `src/manifest.ts` and `src/server.ts` are
+  server-safe: no React, no directive. Never read `document` or `window` at module scope; feature-detect
+  inside effects or handlers.
 - Public exports carry JSDoc with `@example` and `@see`.
 - Small single-purpose modules. Naming and shape follow next-intl, nuqs, next-safe-action.
-- Tool results are strings. Errors returned to agents are sentences, never stack traces.
-- Tools that navigate return their result first and push in `setTimeout(…, 0)`.
+- Tool results are strings. Errors returned to agents are sentences, never stack traces. Server actions
+  behind tools go through `toolAction()` so they validate again on the server and return
+  `{ ok, data | error }` instead of throwing; tools read that with `unwrap()`.
+- Tools that navigate return their result first and push in `setTimeout(…, 0)`; `navigationTool()` does
+  this for an allowlist of route patterns — do not hand-roll path parsing in an example.
 - `<ModelContext>` registers by tool identity (name, title, description, input schema, annotations) with one
   `AbortController` per tool, and `execute` reads the latest definition and route context at call time. Do
   not add mount-scoped state channels to avoid re-registration; a factory inside `useMemo` is enough.
@@ -67,9 +73,14 @@ Never run `git commit` or `git push` on behalf of a user unless asked. Never del
 
 1. Pick the segment that owns it (`app/**/layout.tsx` or `page.tsx`). Tools should exist only where they make
    sense; `add_to_cart` belongs on the product page, not the root layout.
-2. Write or reuse a server action in that segment's `actions.ts`. The action is the tool body.
-3. Add the tool to that segment's `tools.ts` with `defineTools`/`tool`: Zod `input`, a description that says
-   what it does and returns, `annotations.readOnlyHint` for reads, `confirm` for anything consequential.
+2. Write or reuse a server action in that segment's `actions.ts`, wrapped in `toolAction(schema, handler)`
+   from `next-web-mcp/server` so the server validates the arguments again and returns `{ ok, data | error }`.
+   Keep the schema in a plain module both files import (a `"use server"` file exports only functions). The
+   action is the tool body.
+3. Add the tool to that segment's `tools.ts` with `defineTools`/`tool`: the shared Zod `input`, a description
+   that says what it does and returns, `annotations.readOnlyHint` for reads, `confirm` for anything
+   consequential, and `unwrap(await action(input))` in `execute`. For moving between pages add one
+   `navigationTool({ routes })` at the root instead of a per-page navigation tool.
 4. Mount it: a `"use client"` wrapper renders `<ModelContext tools={...}>` around the segment's children. The
    outermost `<ModelContext>` renders the approval card; do not add a second `<ToolConfirmations />`. Tools
    built from props (`createProductTools(product)`) go through `useMemo`; a new array or a new closure with
