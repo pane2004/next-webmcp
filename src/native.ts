@@ -22,7 +22,13 @@ export function isModelContextAvailable(): boolean {
 /** Subscribes to `toolchange`; returns an unsubscribe function. No-op without WebMCP. @internal */
 export function subscribeToolChange(callback: () => void): () => void {
   const mc = getModelContext();
-  if (!mc) return () => {};
+  if (
+    !mc ||
+    typeof mc.addEventListener !== "function" ||
+    typeof mc.removeEventListener !== "function"
+  ) {
+    return () => {};
+  }
   mc.addEventListener("toolchange", callback);
   return () => mc.removeEventListener("toolchange", callback);
 }

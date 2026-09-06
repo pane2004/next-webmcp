@@ -28,6 +28,35 @@ afterEach(() => {
 });
 
 describe("useModelContextTools()", () => {
+  it.each(["addEventListener", "removeEventListener"])(
+    "keeps registration and tool listing working without %s",
+    async (method) => {
+      Object.defineProperty(fake, method, { value: undefined, configurable: true });
+      let seen: RegisteredToolInfo[] = [];
+      function Probe(): null {
+        seen = useModelContextTools();
+        return null;
+      }
+      const t = tool({
+        name: "bridge_tool",
+        description: "Available through a browser bridge",
+        input: z.object({}),
+        execute: () => async () => "ok",
+      });
+      await act(async () => {
+        render(
+          <ModelContext tools={[t]}>
+            <Probe />
+          </ModelContext>,
+        );
+      });
+      expect(seen.map((x) => x.name)).toEqual(["bridge_tool"]);
+      expect((await fake.getTools()).map((x) => x.name)).toEqual(["bridge_tool"]);
+      cleanup();
+      expect(await fake.getTools()).toEqual([]);
+    },
+  );
+
   it("lists live tools merged with registry routes and follows toolchange", async () => {
     let seen: RegisteredToolInfo[] = [];
     function Probe(): null {
