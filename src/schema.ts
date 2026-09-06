@@ -1,11 +1,4 @@
-import * as zod from "zod";
-import type { z } from "zod";
-import { NextWebMCPError } from "./errors";
-
-type ToJSONSchema = (
-  schema: z.ZodTypeAny,
-  params?: { io?: "input" | "output"; unrepresentable?: "any" },
-) => object;
+import { z } from "zod";
 
 const cache = new WeakMap<z.ZodTypeAny, object>();
 
@@ -19,20 +12,12 @@ const cache = new WeakMap<z.ZodTypeAny, object>();
  * toolInputToJsonSchema(z.object({ q: z.string() }));
  * // → { type: "object", properties: { q: { type: "string" } }, required: ["q"] }
  * ```
- * @throws NextWebMCPError `ZOD_TO_JSON_SCHEMA_UNSUPPORTED` when the installed Zod lacks `toJSONSchema`.
  * @internal
  */
 export function toolInputToJsonSchema(schema: z.ZodTypeAny): object {
   const cached = cache.get(schema);
   if (cached) return cached;
-  const toJSONSchema = (zod as { toJSONSchema?: unknown }).toJSONSchema;
-  if (typeof toJSONSchema !== "function") {
-    throw new NextWebMCPError(
-      "ZOD_TO_JSON_SCHEMA_UNSUPPORTED",
-      "z.toJSONSchema is not available. Upgrade to zod@4 (`pnpm add zod@^4`).",
-    );
-  }
-  const json = (toJSONSchema as ToJSONSchema)(schema, { io: "input", unrepresentable: "any" });
+  const json = z.toJSONSchema(schema, { io: "input", unrepresentable: "any" });
   const { $schema: _ignored, ...rest } = json as { $schema?: string } & Record<string, unknown>;
   void _ignored;
   cache.set(schema, rest);

@@ -36,10 +36,10 @@ function toManifestTool(def: ToolDef, route: string): ManifestTool {
   assertValidToolName(def.name);
   return {
     name: def.name,
-    ...(def.title !== undefined ? { title: def.title } : {}),
+    title: def.title,
     description: def.description,
     inputSchema: toolInputToJsonSchema(def.input),
-    ...(def.annotations !== undefined ? { annotations: def.annotations } : {}),
+    annotations: def.annotations,
   };
 }
 
@@ -53,8 +53,7 @@ function toManifestTool(def: ToolDef, route: string): ManifestTool {
  * buildManifest({ "/": rootTools, "/product/[handle]": createProductTools(sample) });
  * // → { version: 1, routes: [{ route: "/", tools: [{ name, description, inputSchema, … }] }, …] }
  * ```
- * @throws NextWebMCPError `TOOL_NAME_INVALID` when a definition has no (or an invalid) name,
- *   `ZOD_TO_JSON_SCHEMA_UNSUPPORTED` when the installed Zod lacks `z.toJSONSchema`.
+ * @throws NextWebMCPError `TOOL_NAME_INVALID` when a definition has no (or an invalid) name.
  * @see https://github.com/pane2004/next-webmcp#manifest
  */
 export function buildManifest(routes: ManifestRoutes): WebMCPManifest {

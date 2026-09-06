@@ -1,5 +1,5 @@
 import { NextWebMCPError, warnOnce } from "./errors";
-import type { ConfirmRequest, ToolCallRecord } from "./types";
+import type { ConfirmRequest, ToolAnnotations, ToolCallRecord } from "./types";
 
 /** How long a confirmation card waits before it is treated as denied. */
 export const CONFIRM_TIMEOUT_MS = 60_000;
@@ -7,8 +7,6 @@ export const CONFIRM_TIMEOUT_MS = 60_000;
 export const CALL_LOG_LIMIT = 200;
 
 /** A tool registered through `<ModelContext>` and the route that owns it. */
-import type { ToolAnnotations } from "./types";
-
 export type RegisteredRoute = {
   readonly route: string;
   readonly title?: string;

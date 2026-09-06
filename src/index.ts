@@ -1,5 +1,3 @@
-"use client";
-
 export { tool, defineTools } from "./tool";
 export { ModelContext, type ModelContextProps } from "./model-context";
 export { ToolConfirmations } from "./confirmations";

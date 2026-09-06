@@ -7,7 +7,6 @@
   "sideEffects": false,
   "packageManager": "pnpm@10.15.0",
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
@@ -17,7 +16,6 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "react-server": "./dist/index.server.js",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
@@ -47,25 +45,6 @@
       "default": "./dist/internal.js"
     },
     "./package.json": "./package.json"
-  },
-  "typesVersions": {
-    "*": {
-      "form": [
-        "./dist/form.d.ts"
-      ],
-      "devtools": [
-        "./dist/devtools.d.ts"
-      ],
-      "manifest": [
-        "./dist/manifest.d.ts"
-      ],
-      "server": [
-        "./dist/server.d.ts"
-      ],
-      "internal": [
-        "./dist/internal.d.ts"
-      ]
-    }
   },
   "scripts": {
     "build": "tsdown",

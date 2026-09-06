@@ -81,15 +81,15 @@ export function useModelContextTools(): RegisteredToolInfo[] {
     () =>
       native.map((t) => {
         const own = routes[t.name];
-        const info: RegisteredToolInfo = { name: t.name, description: t.description };
-        if (t.title) info.title = t.title;
-        // Prefer what this app registered: Chrome 150 returns inputSchema as a JSON string and
-        // omits annotations from getTools(), so the browser copy is only a fallback.
-        const inputSchema = own?.inputSchema ?? parseNativeSchema(t.inputSchema);
-        if (inputSchema !== undefined) info.inputSchema = inputSchema;
-        const annotations = own?.annotations ?? t.annotations;
-        if (annotations !== undefined) info.annotations = annotations;
-        if (own?.route !== undefined) info.route = own.route;
+        // Prefer own copy: Chrome 150 returns title "", inputSchema as a JSON string, no annotations.
+        const info: RegisteredToolInfo = {
+          name: t.name,
+          description: t.description,
+          title: t.title || undefined,
+          inputSchema: own?.inputSchema ?? parseNativeSchema(t.inputSchema),
+          annotations: own?.annotations ?? t.annotations,
+          route: own?.route,
+        };
         return info;
       }),
     [native, routes],

@@ -8,19 +8,17 @@ The `next-web-mcp` package lives at the repository root. Examples are pnpm works
 `"next-web-mcp": "workspace:*"`.
 
 ```
-src/                      the package. index.ts (+ index.server.ts for the react-server condition), form.tsx,
+src/                      the package. index.ts (plain barrel; client modules carry their own "use client"), form.tsx,
                           devtools.tsx, manifest.ts, server.ts (toolAction), navigation-tool.ts (navigationTool),
                           action-result.ts (unwrap, ToolActionResult), internal.ts + helpers
 test/                     vitest + jsdom with a fake document.modelContext (fake-model-context.ts)
 examples/commerce/        demo storefront (vercel/commerce fork): app/, components/, lib/ (mock provider, tools)
 examples/minimal/         three-tool example on a fresh App Router app
-docs/API_CONTRACT.md      binding public API and verified Chrome spec facts — read before touching src/
-docs/api.md               reader-facing API reference (every export, signatures, examples)
-docs/IMPLEMENTATION_PLAN.md  behaviors B1–B12, build order, 0.2 API cleanup, risks
-docs/SUBMISSION.md, docs/EVAL.md
+docs/api.md               API reference (every export, signatures, examples) — read before touching src/
+docs/EVAL.md              evaluation tasks
 skills/next-web-mcp-adoption/  skill for adopting the library in another app
 .github/workflows/ci.yml  prettier → build → typecheck (package + examples) → test → build commerce (Node 22/24)
-.changeset/               changesets config; add one for every user-visible change
+CHANGELOG.md              add a line for every user-visible change
 ```
 
 ## Commands
@@ -39,7 +37,7 @@ pnpm lint | pnpm format          # prettier --check . | prettier --write .
 
 ## Conventions
 
-- TypeScript strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`. No `any` in the public API.
+- TypeScript strict, `noUncheckedIndexedAccess`. No `any` in the public API.
 - `"use client"` is the first line of every client module. `src/manifest.ts` and `src/server.ts` are
   server-safe: no React, no directive. Never read `document` or `window` at module scope; feature-detect
   inside effects or handlers.
@@ -55,17 +53,17 @@ pnpm lint | pnpm format          # prettier --check . | prettier --write .
   not add mount-scoped state channels to avoid re-registration; a factory inside `useMemo` is enough.
 - Prettier: double quotes, semicolons, trailing commas, `printWidth: 100`. Run `pnpm format` before finishing.
 - Do not add dependencies to the package. Peers only: next, react, react-dom, zod.
-- Do not invent exports beyond `docs/API_CONTRACT.md`; propose contract changes there first.
+- Do not invent exports beyond `docs/api.md`; update it in the same PR as any public API change.
 
 ## Ownership boundaries
 
-| Area                                             | Owner / rule                                                        |
-| ------------------------------------------------ | ------------------------------------------------------------------- |
-| `docs/API_CONTRACT.md`                           | Change only with agreement from library and app owners.             |
-| `src/`, `test/`                                  | Library. Must satisfy the contract and B1–B12.                      |
-| `examples/commerce/app`, `examples/commerce/lib` | Demo. Uses only the public API. Mock provider must run with no env. |
-| `examples/minimal`                               | Must stay on the contract API; no library internals.                |
-| Docs, CI, changesets, skill                      | Keep in sync with the contract; never publish unverified numbers.   |
+| Area                                             | Owner / rule                                                                      |
+| ------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `docs/api.md`                                    | The public API reference. Change only with agreement from library and app owners. |
+| `src/`, `test/`                                  | Library. Must match `docs/api.md`.                                                |
+| `examples/commerce/app`, `examples/commerce/lib` | Demo. Uses only the public API. Mock provider must run with no env.               |
+| `examples/minimal`                               | Uses only the public API; no library internals.                                   |
+| Docs, CI, CHANGELOG, skill                       | Keep in sync with `docs/api.md`; never publish unverified numbers.                |
 
 Never run `git commit` or `git push` on behalf of a user unless asked. Never delete files you do not own.
 
@@ -89,4 +87,4 @@ Never run `git commit` or `git push` on behalf of a user unless asked. Never del
    (`createManifestHandler({ "/": rootTools, "/product/[handle]": productTools, … })`).
 6. Verify in Chrome (`chrome://flags/#enable-webmcp-testing`) with the DevTools panel: the tool appears on the
    right route, disappears on navigation, and returns a useful string. Check `/.well-known/webmcp.json`.
-7. Add a test if it is library behavior; add a changeset if it is user-visible.
+7. Add a test if it is library behavior; add a line to CHANGELOG.md if it is user-visible.

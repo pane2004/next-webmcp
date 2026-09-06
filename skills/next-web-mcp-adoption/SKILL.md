@@ -12,7 +12,7 @@ small, verifiable steps and keep the app's current UI untouched. The public API 
 ## Step 0 — Preconditions
 
 - `next >= 15`, `react >= 19`, App Router (`app/` directory). Pages Router is not supported.
-- Zod 4 (`zod >= 4`) for `z.toJSONSchema`. If the app is on Zod 3, upgrade or scope tools to a Zod 4 import.
+- Zod 4 (`zod ^4`) for `z.toJSONSchema`; upgrade if the app is older.
 - Install: `pnpm add next-web-mcp zod` (or the app's package manager).
 
 ## Step 1 — Inventory server actions and routes

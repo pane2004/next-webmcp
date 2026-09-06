@@ -10,18 +10,6 @@ import {
 } from "react";
 import { registry, type PendingConfirmation } from "./registry";
 
-function subscribeReducedMotion(callback: () => void): () => void {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return () => {};
-  const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-  query.addEventListener("change", callback);
-  return () => query.removeEventListener("change", callback);
-}
-
-function getReducedMotion(): boolean {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
 const NO_CONFIRMATIONS: readonly PendingConfirmation[] = [];
 
 function getNoConfirmations(): readonly PendingConfirmation[] {
@@ -103,8 +91,6 @@ export function ToolConfirmations(): React.JSX.Element | null {
   const confirmations = useConfirmationQueue();
   const pending = confirmations[0];
   const queued = confirmations.length;
-  const reducedMotion = useSyncExternalStore(subscribeReducedMotion, getReducedMotion, () => true);
-
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -142,10 +128,7 @@ export function ToolConfirmations(): React.JSX.Element | null {
       aria-modal="false"
       aria-labelledby={titleId}
       data-next-web-mcp="confirm"
-      style={{
-        ...card,
-        transition: reducedMotion ? "none" : "opacity 150ms ease, transform 150ms ease",
-      }}
+      style={card}
     >
       <div
         style={{

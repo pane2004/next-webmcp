@@ -19,10 +19,8 @@ Node 22 or 24. No environment variables are needed; the demo runs against a mock
 1. `pnpm format` (prettier).
 2. `pnpm build && pnpm typecheck && pnpm typecheck:examples && pnpm test`.
 3. `pnpm --filter example-commerce build` if you touched the demo.
-4. Add a changeset for user-visible changes to the package:
-   `pnpm dlx @changesets/cli add` (or write `.changeset/<name>.md` by hand: frontmatter with
-   `"next-web-mcp": patch | minor | major`, then a one-paragraph summary).
-5. Public API changes go through `docs/API_CONTRACT.md` first; update `docs/api.md` in the same PR.
+4. Add a line to `CHANGELOG.md` for user-visible changes to the package.
+5. Public API changes: update `docs/api.md` in the same PR.
 
 CI runs the same steps on Node 22 and 24.
 

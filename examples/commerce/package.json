@@ -32,8 +32,7 @@
     "prettier": "3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "tailwindcss": "^4.0.14",
-    "typescript": "5.8.2",
-    "webmcp-types": "^0.1.6"
+    "typescript": "5.8.2"
   },
   "name": "example-commerce"
 }

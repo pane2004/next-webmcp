@@ -21,10 +21,10 @@ export function assertValidToolName(name: string): void {
 
 /**
  * Defines a tool with full type inference from its Zod `input` schema.
- * Validates the name and converts `input` to JSON Schema right away, so a bad name or an
- * installed Zod without `z.toJSONSchema` fails at definition time rather than silently in render.
+ * Validates the name and converts `input` to JSON Schema right away, so a bad name fails at
+ * definition time rather than silently in render.
  *
- * @throws NextWebMCPError `TOOL_NAME_INVALID` or `ZOD_TO_JSON_SCHEMA_UNSUPPORTED`.
+ * @throws NextWebMCPError `TOOL_NAME_INVALID`.
  * @example
  * ```ts
  * const addToCart = tool({
@@ -57,7 +57,7 @@ export function tool<TInput extends z.ZodTypeAny>(def: ToolDef<TInput>): ToolDef
  * });
  * // tools[0].name === "search"
  * ```
- * @throws NextWebMCPError `TOOL_NAME_INVALID` or `ZOD_TO_JSON_SCHEMA_UNSUPPORTED`.
+ * @throws NextWebMCPError `TOOL_NAME_INVALID`.
  * @see https://github.com/pane2004/next-webmcp#definetools
  */
 export function defineTools(map: Record<string, ToolDef<AnyZodSchema>>): ToolDef[] {

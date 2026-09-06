@@ -133,7 +133,7 @@ pnpm add next-web-mcp zod
 ```
 
 Peer dependencies: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4` (JSON Schema conversion uses
-`z.toJSONSchema`; Zod 3 throws `ZOD_TO_JSON_SCHEMA_UNSUPPORTED` at definition time). Node 22+.
+`z.toJSONSchema`). Node 22+.
 
 ## Concepts
 
@@ -311,7 +311,7 @@ Chrome's WebMCP guidance, and where next-web-mcp implements it.
 ### Verified against Chrome 150 (2026-09-04)
 
 The library is exercised on the live demo with the origin-trial token, not only against the in-memory fake.
-Three places where Chrome 150 differs from `webmcp-types@0.1.6`, and how `next-web-mcp` handles them:
+Four places where Chrome 150 differs from `webmcp-types@0.1.6`, and how `next-web-mcp` handles them:
 
 | Chrome 150 behavior                                                                        | What the library does                                                                                     |
 | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -357,7 +357,7 @@ defined; no runs have been recorded yet, and no numbers appear here until they a
 src/, test/            the next-web-mcp package (root of the repo; tsdown + vitest)
 examples/commerce      demo storefront (Next.js App Router, mock provider) — deployed to Vercel
 examples/minimal       smallest possible app: three tools (one from navigationTool), one confirm, manifest
-docs/                  api.md (reference), API_CONTRACT (binding), IMPLEMENTATION_PLAN, SUBMISSION, EVAL
+docs/                  api.md (reference), EVAL.md (evaluation tasks)
 skills/                agent skill for adopting next-web-mcp in an existing app
 ```
 

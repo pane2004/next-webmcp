@@ -8,11 +8,8 @@ import { formatZodIssues } from "./schema";
 
 export type { ToolActionResult } from "./action-result";
 
-/**
- * Options for {@link toolAction}. `S` is the action's input schema; it is not read by these
- * options today and exists so an options object can be typed next to its action.
- */
-export type ToolActionOptions<S extends z.ZodTypeAny, R> = {
+/** Options for {@link toolAction}. */
+export type ToolActionOptions<R> = {
   /**
    * Validates what the handler returns before it leaves the server. On failure the agent gets
    * `The server returned an unexpected result.` and the issues go to `console.error`. On
@@ -76,7 +73,7 @@ function describeFailure(err: unknown, onError: ((error: unknown) => string) | u
 export function toolAction<S extends z.ZodTypeAny, R>(
   input: S,
   handler: (input: z.infer<S>) => Promise<R> | R,
-  options: ToolActionOptions<S, R> = {},
+  options: ToolActionOptions<R> = {},
 ): (raw: unknown) => Promise<ToolActionResult<R>> {
   const { output, onError } = options;
   return async (raw: unknown): Promise<ToolActionResult<R>> => {

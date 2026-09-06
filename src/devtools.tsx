@@ -73,32 +73,8 @@ const pre: CSSProperties = {
   overflow: "auto",
 };
 
-type SchemaProperty = { type?: string | string[]; description?: string; enum?: unknown[] };
-
-/** Builds a natural-language prompt an agent could be given to call `tool`. */
-export function promptForTool(tool: RegisteredToolInfo): string {
-  const schema = (tool.inputSchema ?? {}) as {
-    properties?: Record<string, SchemaProperty>;
-    required?: string[];
-  };
-  const required = new Set(schema.required ?? []);
-  const args = Object.entries(schema.properties ?? {}).map(([key, prop]) => {
-    const type = Array.isArray(prop.type) ? prop.type.join("|") : (prop.type ?? "any");
-    const enumText = prop.enum
-      ? ` one of ${prop.enum.map((v) => JSON.stringify(v)).join(", ")}`
-      : "";
-    const desc = prop.description ? ` — ${prop.description}` : "";
-    return `  - ${key} (${type}${required.has(key) ? ", required" : ""})${enumText}${desc}`;
-  });
-  const head = `Use the "${tool.name}" tool${tool.title ? ` (${tool.title})` : ""} to ${tool.description}`;
-  return args.length
-    ? `${head}\nArguments:\n${args.join("\n")}`
-    : `${head}. It takes no arguments.`;
-}
-
 function ToolsTab({ tools }: { tools: RegisteredToolInfo[] }): React.JSX.Element {
   const [open, setOpen] = useState<Record<string, boolean>>({});
-  const [copied, setCopied] = useState<string | null>(null);
   const groups = useMemo(() => {
     const map = new Map<string, RegisteredToolInfo[]>();
     for (const t of tools) {
@@ -109,13 +85,6 @@ function ToolsTab({ tools }: { tools: RegisteredToolInfo[] }): React.JSX.Element
       a === OTHER_ROUTE ? 1 : b === OTHER_ROUTE ? -1 : a.localeCompare(b),
     );
   }, [tools]);
-  const copy = (t: RegisteredToolInfo): void => {
-    const text = promptForTool(t);
-    void navigator.clipboard
-      ?.writeText(text)
-      .then(() => setCopied(t.name))
-      .catch(() => setCopied(null));
-  };
   if (tools.length === 0)
     return <p style={{ opacity: 0.7 }}>No tools registered on document.modelContext.</p>;
   return (
@@ -142,9 +111,6 @@ function ToolsTab({ tools }: { tools: RegisteredToolInfo[] }): React.JSX.Element
                   aria-expanded={!!open[t.name]}
                 >
                   Schema
-                </button>
-                <button type="button" style={smallButton} onClick={() => copy(t)}>
-                  {copied === t.name ? "Copied" : "Copy prompt"}
                 </button>
               </div>
               <div style={{ opacity: 0.8 }}>{t.description}</div>

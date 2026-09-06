@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NextWebMCPError } from "./errors";
+import { formatZodIssues } from "./schema";
 import { tool } from "./tool";
 import type { ToolContext, ToolDef } from "./types";
 
@@ -81,15 +82,6 @@ function encodeSegment(segment: Segment, value: string): string {
   return segment.catchAll
     ? catchAllPieces(value).map(encodeURIComponent).join("/")
     : encodeURIComponent(value);
-}
-
-function formatIssues(issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>): string {
-  return issues
-    .map(
-      (issue) =>
-        `${issue.path.length ? issue.path.map(String).join(".") : "(root)"}: ${issue.message}`,
-    )
-    .join("; ");
 }
 
 /** Keys of a Zod object, split into required and optional (accepts `undefined`). */
@@ -228,7 +220,7 @@ export function navigationTool(options: {
       if (route.params) {
         const parsed = route.params.safeParse(rawParams);
         if (!parsed.success) {
-          return `Invalid params for route "${route.path}": ${formatIssues(parsed.error.issues)}. Fix the arguments and call again.`;
+          return `Invalid params for route "${route.path}": ${formatZodIssues(parsed.error.issues)}. Fix the arguments and call again.`;
         }
         params = parsed.data as Record<string, unknown>;
       }
@@ -248,7 +240,7 @@ export function navigationTool(options: {
       if (route.query) {
         const parsed = route.query.safeParse(query);
         if (!parsed.success) {
-          return `Invalid query for route "${route.path}": ${formatIssues(parsed.error.issues)}. Fix the arguments and call again.`;
+          return `Invalid query for route "${route.path}": ${formatZodIssues(parsed.error.issues)}. Fix the arguments and call again.`;
         }
         query = parsed.data as Record<string, unknown>;
       }

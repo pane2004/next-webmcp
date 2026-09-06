@@ -12,7 +12,7 @@ What are you trying to do that the current API makes hard?
 
 **Proposed API**
 
-Show the code you would like to write. Changes to exports go through `docs/API_CONTRACT.md`.
+Show the code you would like to write.
 
 **Spec reference**
 

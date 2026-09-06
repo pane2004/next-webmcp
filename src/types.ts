@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { useRouter } from "next/navigation";
+import type { useParams, useRouter } from "next/navigation";
 
 /** The App Router instance returned by `useRouter()` from `next/navigation`. */
 export type AppRouterInstance = ReturnType<typeof useRouter>;
@@ -28,7 +28,7 @@ export type ConfirmRequest = {
 /** Route-aware context handed to `execute(ctx)` and `confirm(input, ctx)`. */
 export type ToolContext = {
   /** From `useParams()`, read when the tool runs. */
-  params: Record<string, string | string[]>;
+  params: ReturnType<typeof useParams>;
   /** From `usePathname()`, read when the tool runs. */
   pathname: string;
   /** Read lazily from `window.location.search` when the tool runs. */

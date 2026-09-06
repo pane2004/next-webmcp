@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { NextWebMCPError, defineTools, tool } from "../src/index";
-import { buildManifest, createManifestHandler } from "../src/manifest";
+import { buildManifest, createManifestHandler, type ManifestRoutes } from "../src/manifest";
 import type { ToolDef } from "../src/types";
 
 const noop = () => async () => "ok";
@@ -123,7 +123,7 @@ describe("createManifestHandler()", () => {
 
   it("calls an async factory on every request", async () => {
     let calls = 0;
-    const GET = createManifestHandler(async () => {
+    const GET = createManifestHandler(async (): Promise<ManifestRoutes> => {
       calls += 1;
       return calls === 1
         ? { "/": rootTools }

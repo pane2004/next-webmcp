@@ -8,13 +8,7 @@ import { getModelContext } from "./native";
 import { nextId, registry } from "./registry";
 import { formatZodIssues, toolInputToJsonSchema } from "./schema";
 import { TOOL_NAME_PATTERN } from "./tool";
-import type {
-  AppRouterInstance,
-  ConfirmRequest,
-  ToolAnnotations,
-  ToolContext,
-  ToolDef,
-} from "./types";
+import type { AppRouterInstance, ConfirmRequest, ToolContext, ToolDef } from "./types";
 
 /** Props for {@link ModelContext}. */
 export type ModelContextProps = {
@@ -31,19 +25,6 @@ export type ModelContextProps = {
 
 /** `true` anywhere below a `<ModelContext>`, so nested instances skip the confirmation card. */
 const ModelContextNesting = createContext(false);
-
-/** Combines several signals into one (polyfill for `AbortSignal.any`). */
-function anySignal(signals: AbortSignal[]): AbortSignal {
-  const controller = new AbortController();
-  for (const s of signals) {
-    if (s.aborted) {
-      controller.abort(s.reason);
-      break;
-    }
-    s.addEventListener("abort", () => controller.abort(s.reason), { once: true });
-  }
-  return controller.signal;
-}
 
 function toDisplayValue(value: unknown): string {
   if (typeof value === "string") return value;
@@ -62,9 +43,7 @@ function defaultConfirmRequest(def: ToolDef, name: string, input: unknown): Conf
           value: toDisplayValue(value),
         }))
       : [{ label: "input", value: toDisplayValue(input) }];
-  const request: ConfirmRequest = { title: def.title ?? name, details };
-  if (def.description) request.description = def.description;
-  return request;
+  return { title: def.title ?? name, description: def.description, details };
 }
 
 type RunOptions = {
@@ -76,7 +55,7 @@ type RunOptions = {
   ctx: ToolContext;
 };
 
-/** Runs one tool call with the semantics from the API contract (validate → confirm → execute → log). */
+/** Runs one tool call: validate → confirm → execute → log. */
 async function runTool({ def, name, route, raw, signal, ctx }: RunOptions): Promise<string> {
   const startedAt = Date.now();
   let ok = true;
@@ -125,9 +104,6 @@ async function runTool({ def, name, route, raw, signal, ctx }: RunOptions): Prom
   return output;
 }
 
-/** Route params as handed to tools: `useParams()` output with `undefined` entries dropped. */
-type RouteParams = Record<string, string | string[]>;
-
 /**
  * What a native `execute` call reads at call time (never at registration time), so a tool
  * registered once keeps seeing the current route and the current `execute`/`confirm` closures.
@@ -136,7 +112,7 @@ type Latest = {
   /** First definition per name in the current `tools` prop. */
   readonly defsByName: ReadonlyMap<string, ToolDef>;
   readonly pathname: string;
-  readonly params: RouteParams;
+  readonly params: ReturnType<typeof useParams>;
   readonly router: AppRouterInstance;
 };
 
@@ -151,7 +127,6 @@ type Registration = {
 };
 
 const EMPTY_DEFS: ReadonlyMap<string, ToolDef> = new Map();
-const EMPTY_PARAMS: RouteParams = Object.freeze({});
 
 /**
  * Identity of a tool as the browser sees it: everything `registerTool` receives except `execute`.
@@ -167,13 +142,6 @@ function toolKey(def: ToolDef, name: string, inputSchema: object): string {
     inputSchema,
     annotations: def.annotations,
   });
-}
-
-function toRouteParams(params: Record<string, string | string[] | undefined> | null): RouteParams {
-  if (!params) return EMPTY_PARAMS;
-  const out: RouteParams = {};
-  for (const [key, value] of Object.entries(params)) if (value !== undefined) out[key] = value;
-  return out;
 }
 
 /** First definition wins for duplicate names, matching the registration order below. */
@@ -221,7 +189,7 @@ export function ModelContext({
   const router = useRouter();
   // Written only inside effects (React Compiler safe). The sync effect below runs before the
   // registration effect in every commit, so no registered tool ever reads the initial value.
-  const latest = useRef<Latest>({ defsByName: EMPTY_DEFS, pathname, params: EMPTY_PARAMS, router });
+  const latest = useRef<Latest>({ defsByName: EMPTY_DEFS, pathname, params, router });
   const registrations = useRef(new Map<string, Registration>());
 
   // 1. Latest closure. Declared first so (re)registrations and native execute calls in the same
@@ -230,7 +198,7 @@ export function ModelContext({
     latest.current = {
       defsByName: indexByName(tools),
       pathname,
-      params: toRouteParams(params),
+      params,
       router,
     };
   }, [tools, pathname, params, router]);
@@ -296,11 +264,13 @@ export function ModelContext({
         name,
         description: def.description,
         inputSchema,
+        title: def.title,
+        annotations: def.annotations,
         // Chrome 150 calls execute(input) with a single argument (no options object), so the
         // per-call signal is optional in practice even though the spec always provides it.
         execute: (raw, options?: { signal?: AbortSignal }) => {
           const execSignal = options?.signal;
-          const signal = anySignal(
+          const signal = AbortSignal.any(
             execSignal ? [execSignal, controller.signal] : [controller.signal],
           );
           // Read at call time: the newest closure for this name, and the current route.
@@ -316,7 +286,7 @@ export function ModelContext({
               registry.requestConfirm(
                 name,
                 request,
-                confirmSignal ? anySignal([confirmSignal, signal]) : signal,
+                confirmSignal ? AbortSignal.any([confirmSignal, signal]) : signal,
               ),
           };
           return runTool({
@@ -329,8 +299,6 @@ export function ModelContext({
           });
         },
       };
-      if (def.title !== undefined) native.title = def.title;
-      if (def.annotations !== undefined) native.annotations = def.annotations;
 
       // Spec call: document.modelContext.registerTool(tool, { signal }). Aborting `signal`
       // unregisters this one tool.
@@ -348,16 +316,17 @@ export function ModelContext({
         onRegisterError(err);
         continue;
       }
-      const info: {
-        route: string;
-        description: string;
-        title?: string;
-        inputSchema: object;
-        annotations?: ToolAnnotations;
-      } = { route, description: def.description, inputSchema };
-      if (def.title !== undefined) info.title = def.title;
-      if (def.annotations !== undefined) info.annotations = def.annotations;
-      live.set(name, { key, controller, unregister: registry.registerTool(name, info) });
+      live.set(name, {
+        key,
+        controller,
+        unregister: registry.registerTool(name, {
+          route,
+          title: def.title,
+          description: def.description,
+          inputSchema,
+          annotations: def.annotations,
+        }),
+      });
       keep.add(name);
     }
 

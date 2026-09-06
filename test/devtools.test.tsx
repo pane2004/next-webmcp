@@ -1,9 +1,8 @@
-import "./setup";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { ModelContext, tool } from "../src/index";
-import { WebMCPDevTools, promptForTool } from "../src/devtools";
+import { WebMCPDevTools } from "../src/devtools";
 import { __resetForTests } from "../src/internal";
 import { installFakeModelContext, uninstallFakeModelContext } from "./fake-model-context";
 import { resetNav } from "./mock-navigation";
@@ -52,20 +51,5 @@ describe("WebMCPDevTools", () => {
     expect(screen.getByRole("tabpanel").textContent).toContain("hi bob");
     fireEvent.click(screen.getByRole("tab", { name: "Calls" }));
     expect(screen.getByRole("tabpanel").textContent).toContain("greet");
-  });
-
-  it("derives a prompt from the schema", () => {
-    const prompt = promptForTool({
-      name: "greet",
-      description: "greet someone",
-      inputSchema: {
-        type: "object",
-        properties: { who: { type: "string", description: "Name" }, loud: { type: "boolean" } },
-        required: ["who"],
-      },
-    });
-    expect(prompt).toContain('Use the "greet" tool to greet someone');
-    expect(prompt).toContain("who (string, required) — Name");
-    expect(prompt).toContain("loud (boolean)");
   });
 });

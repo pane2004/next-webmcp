@@ -1,8 +1,7 @@
 # next-web-mcp API reference
 
 Every public export, with its signature, behavior, and an example. For the pitch, the quick start, and the
-spec-alignment table see the [README](../README.md); for the binding contract that the implementation and
-tests follow see [API_CONTRACT.md](./API_CONTRACT.md).
+spec-alignment table see the [README](../README.md).
 
 ```sh
 pnpm add next-web-mcp zod
@@ -12,23 +11,23 @@ Peers: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4`. Node 22+.
 
 ## Entry points
 
-| Import                  | Runs in       | Contents                                                                                                                |
-| ----------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `next-web-mcp`          | client        | `tool`, `defineTools`, `navigationTool`, `unwrap`, `ModelContext`, `ToolConfirmations`, hooks, `NextWebMCPError`, types |
-| `next-web-mcp/server`   | server        | `toolAction` — validates a server action's input and output, returns `{ ok, data \| error }`; `ToolActionResult`        |
-| `next-web-mcp/form`     | client        | `Form` — `next/form` with the WebMCP attributes and `respondWith`; ships the JSX typings                                |
-| `next-web-mcp/manifest` | server / Node | `createManifestHandler`, `buildManifest`, manifest types                                                                |
-| `next-web-mcp/devtools` | client, dev   | `WebMCPDevTools`                                                                                                        |
-| `next-web-mcp/internal` | tests         | `__resetForTests`, `registry`                                                                                           |
+| Import                  | Runs in         | Contents                                                                                                                |
+| ----------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `next-web-mcp`          | client + server | `tool`, `defineTools`, `navigationTool`, `unwrap`, `ModelContext`, `ToolConfirmations`, hooks, `NextWebMCPError`, types |
+| `next-web-mcp/server`   | server          | `toolAction` — validates a server action's input and output, returns `{ ok, data \| error }`; `ToolActionResult`        |
+| `next-web-mcp/form`     | client          | `Form` — `next/form` with the WebMCP attributes and `respondWith`; ships the JSX typings                                |
+| `next-web-mcp/manifest` | server / Node   | `createManifestHandler`, `buildManifest`, manifest types                                                                |
+| `next-web-mcp/devtools` | client, dev     | `WebMCPDevTools`                                                                                                        |
+| `next-web-mcp/internal` | tests           | `__resetForTests`, `registry`                                                                                           |
 
-The client entries start with `"use client"`. `next-web-mcp/manifest` and `next-web-mcp/server` import no
-React and can be used from route handlers, server actions, server components, and scripts.
+`next-web-mcp/form` and `next-web-mcp/devtools` start with `"use client"`. `next-web-mcp/manifest` and
+`next-web-mcp/server` import no React and can be used from route handlers, server actions, server components,
+and scripts.
 
-A `tools.ts` module that imports `tool` from `next-web-mcp` can be shared between a page and the manifest route
-handler: under the `react-server` export condition (Server Components, route handlers, server actions) the
-package resolves to a directive-free build in which `tool`, `defineTools`, `navigationTool`, `unwrap`,
-`NextWebMCPError` and `isModelContextAvailable` are the real functions, while the components and hooks remain
-client references.
+`next-web-mcp` itself is a plain barrel; each `"use client"` file keeps its own directive. So `tool`,
+`defineTools`, `navigationTool`, `unwrap`, `NextWebMCPError` and `isModelContextAvailable` are real functions
+on the server (a `tools.ts` that imports them can be shared between a page and the manifest route handler),
+while `ModelContext`, `ToolConfirmations` and the hooks stay client references.
 
 ## `next-web-mcp`
 
@@ -67,7 +66,7 @@ export const getTime = tool({
 
 | Field          | Source                                                                               |
 | -------------- | ------------------------------------------------------------------------------------ |
-| `params`       | `useParams()`, as of the call                                                        |
+| `params`       | `useParams()` (`Record<string, string \| string[] \| undefined>`), as of the call    |
 | `pathname`     | `usePathname()`, as of the call                                                      |
 | `searchParams` | `URLSearchParams` of the current URL, read when the tool runs                        |
 | `router`       | `useRouter()` from `next/navigation`, as of the call                                 |
@@ -184,8 +183,8 @@ Results, in the order they are checked:
 
 Routes without `params` / `query` schemas pass the values through unchecked apart from segment presence.
 Throws `NextWebMCPError` with code `TOOL_NAME_INVALID` when `routes` is empty or `name` breaks Chrome's rule.
-Under the `react-server` condition `navigationTool` is a real function, so a `tools.ts` that uses it still
-loads in the manifest route handler.
+`navigationTool` is a real function on the server, so a `tools.ts` that uses it still loads in the manifest
+route handler.
 
 ### `unwrap(result)`
 
@@ -375,22 +374,21 @@ import { NextWebMCPError } from "next-web-mcp";
 try {
   // ...
 } catch (err) {
-  if (err instanceof NextWebMCPError && err.code === "ZOD_TO_JSON_SCHEMA_UNSUPPORTED") {
-    // upgrade zod
+  if (err instanceof NextWebMCPError && err.code === "TOOL_NAME_INVALID") {
+    // fix the name
   }
 }
 ```
 
 ### Error codes
 
-| `code`                           | Meaning                                                                                                                                                                                                                                                                                                                                                                            |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TOOL_NAME_INVALID`              | Name outside `[A-Za-z0-9_.-]{1,128}`, a `ToolDef` without a name reached `buildManifest`, or `navigationTool` was given no routes.                                                                                                                                                                                                                                                 |
-| `TOOL_NAME_DUPLICATE`            | Same name registered by two mounted contexts (dev warning; later wins).                                                                                                                                                                                                                                                                                                            |
-| `MODEL_CONTEXT_UNAVAILABLE`      | `document.modelContext` missing. One `console.info`; registration no-ops.                                                                                                                                                                                                                                                                                                          |
-| `ZOD_TO_JSON_SCHEMA_UNSUPPORTED` | No `z.toJSONSchema` on the installed Zod (Zod 3). Thrown by `tool()`/`defineTools()` at definition time; upgrade to Zod 4.                                                                                                                                                                                                                                                         |
-| `CONFIRM_TIMEOUT`                | No decision within 60 s; the agent receives `User declined <name>.`.                                                                                                                                                                                                                                                                                                               |
-| `CONFIRM_NO_RENDERER`            | A tool with `confirm` ran while nothing was subscribed to render the card. Rejected immediately; the agent receives `<name> failed: [next-web-mcp] Tool "<name>" needs approval but no <ToolConfirmations/> is mounted. Keep the default confirmations on <ModelContext>, or mount <ToolConfirmations/> yourself. Check the page state and try again.` Warned once in development. |
+| `code`                      | Meaning                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TOOL_NAME_INVALID`         | Name outside `[A-Za-z0-9_.-]{1,128}`, a `ToolDef` without a name reached `buildManifest`, or `navigationTool` was given no routes.                                                                                                                                                                                                                                                 |
+| `TOOL_NAME_DUPLICATE`       | Same name registered by two mounted contexts (dev warning; later wins).                                                                                                                                                                                                                                                                                                            |
+| `MODEL_CONTEXT_UNAVAILABLE` | `document.modelContext` missing. One `console.info`; registration no-ops.                                                                                                                                                                                                                                                                                                          |
+| `CONFIRM_TIMEOUT`           | No decision within 60 s; the agent receives `User declined <name>.`.                                                                                                                                                                                                                                                                                                               |
+| `CONFIRM_NO_RENDERER`       | A tool with `confirm` ran while nothing was subscribed to render the card. Rejected immediately; the agent receives `<name> failed: [next-web-mcp] Tool "<name>" needs approval but no <ToolConfirmations/> is mounted. Keep the default confirmations on <ModelContext>, or mount <ToolConfirmations/> yourself. Check the page state and try again.` Warned once in development. |
 
 ### Types
 
@@ -548,7 +546,7 @@ The server side of a tool. Server-safe: no React, no `"use client"`, nothing tha
 ```ts
 type ToolActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
-type ToolActionOptions<S extends z.ZodTypeAny, R> = {
+type ToolActionOptions<R> = {
   /** Checks the handler's result; on success the parsed value is returned (unknown keys stripped). */
   output?: z.ZodType<R>;
   /** Maps a thrown error to the sentence the agent reads. Default: a generic sentence, never the message. */
@@ -558,7 +556,7 @@ type ToolActionOptions<S extends z.ZodTypeAny, R> = {
 function toolAction<S extends z.ZodTypeAny, R>(
   input: S,
   handler: (input: z.infer<S>) => Promise<R> | R,
-  options?: ToolActionOptions<S, R>,
+  options?: ToolActionOptions<R>,
 ): (raw: unknown) => Promise<ToolActionResult<R>>;
 ```
 
@@ -640,8 +638,7 @@ export function DevTools() {
 | `defaultOpen` | `boolean`                                         | `false`          |
 | `force`       | `boolean` — render in production too (demos only) | `false`          |
 
-Tabs: **Tools** (live list grouped by route, JSON Schema toggle, "Copy prompt" that derives a natural-language
-prompt from the schema), **Run** (JSON args → `document.modelContext.executeTool`, shows "navigated (null)"
+Tabs: **Tools** (live list grouped by route, JSON Schema toggle), **Run** (JSON args → `document.modelContext.executeTool`, shows "navigated (null)"
 when the tool navigated), **Calls** (`useToolCalls()`). Returns `null` when `NODE_ENV === "production"`
 unless `force`. Inline styles only, zero dependencies. Override `--next-web-mcp-offset` and
 `--next-web-mcp-z-index` to reposition it.
@@ -676,11 +673,9 @@ server-action errors in production.
 **Does it work without a WebMCP-capable browser?**
 Yes — `<ModelContext>` logs one `console.info` and does nothing. Your UI is unchanged.
 
-**Can I use Zod 3?**
-No. The peer range is `zod@^4` because JSON Schema conversion needs `z.toJSONSchema`. If a Zod without it is
-installed anyway, `tool()` and `defineTools()` throw `NextWebMCPError` with code
-`ZOD_TO_JSON_SCHEMA_UNSUPPORTED` when the tool is defined, so the problem surfaces at module load, not in
-render.
+**Can I use an older Zod?**
+No. The peer range is `zod@^4` because JSON Schema conversion needs `z.toJSONSchema`; without it `tool()` and
+`defineTools()` fail when the tool is defined, so the problem surfaces at module load, not in render.
 
 **Why did my confirm tool fail with `CONFIRM_NO_RENDERER`?**
 Something set `confirmations={false}` on the outermost `<ModelContext>` without mounting

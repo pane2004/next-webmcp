@@ -27,13 +27,6 @@ export function subscribeToolChange(callback: () => void): () => void {
   return () => mc.removeEventListener("toolchange", callback);
 }
 
-/** Lists registered tools (alphabetized by the browser). Empty without WebMCP. @internal */
-export async function listTools(): Promise<WebMCP.RegisteredTool[]> {
-  const mc = getModelContext();
-  if (!mc) return [];
-  return mc.getTools();
-}
-
 type ExecuteToolFn = (
   tool: WebMCP.RegisteredTool,
   json: string,
