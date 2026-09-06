@@ -62,10 +62,13 @@ export function useModelContextTools(): RegisteredToolInfo[] {
     const mc = getModelContext();
     if (!mc) return;
     let cancelled = false;
+    // Start the chain inside a Promise so a bridge whose getTools is missing, throws, or
+    // returns an array synchronously can never throw out of this effect.
     const refresh = (): void => {
-      mc.getTools()
+      Promise.resolve()
+        .then(() => mc.getTools())
         .then((list) => {
-          if (!cancelled) setNative(list);
+          if (!cancelled && Array.isArray(list)) setNative(list);
         })
         .catch(() => {});
     };

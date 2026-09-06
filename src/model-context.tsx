@@ -269,7 +269,7 @@ export function ModelContext({
         // Chrome 150 calls execute(input) with a single argument (no options object), so the
         // per-call signal is optional in practice even though the spec always provides it.
         execute: (raw, options?: { signal?: AbortSignal }) => {
-          const execSignal = options?.signal;
+          const execSignal = options?.signal instanceof AbortSignal ? options.signal : undefined;
           const signal = AbortSignal.any(
             execSignal ? [execSignal, controller.signal] : [controller.signal],
           );

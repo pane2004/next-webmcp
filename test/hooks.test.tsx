@@ -28,6 +28,68 @@ afterEach(() => {
 });
 
 describe("useModelContextTools()", () => {
+  it.each([
+    ["is missing", undefined],
+    [
+      "throws",
+      () => {
+        throw new Error("no tools");
+      },
+    ],
+  ] as const)(
+    "returns an empty list instead of crashing when getTools %s",
+    async (_label, impl) => {
+      Object.defineProperty(fake, "getTools", { value: impl, configurable: true });
+      let seen: RegisteredToolInfo[] = [];
+      function Probe(): null {
+        seen = useModelContextTools();
+        return null;
+      }
+      const t = tool({
+        name: "bridge_tool",
+        description: "Available through a browser bridge",
+        input: z.object({}),
+        execute: () => async () => "ok",
+      });
+      await act(async () => {
+        render(
+          <ModelContext tools={[t]}>
+            <Probe />
+          </ModelContext>,
+        );
+      });
+      expect(seen).toEqual([]);
+      expect(fake.tools.has("bridge_tool")).toBe(true);
+    },
+  );
+
+  it("accepts a getTools that returns an array synchronously", async () => {
+    Object.defineProperty(fake, "getTools", {
+      value: () =>
+        [...fake.tools.values()].map((x) => ({ name: x.name, description: x.description })),
+      configurable: true,
+    });
+    let seen: RegisteredToolInfo[] = [];
+    function Probe(): null {
+      seen = useModelContextTools();
+      return null;
+    }
+    const t = tool({
+      name: "bridge_tool",
+      description: "Available through a browser bridge",
+      input: z.object({}),
+      execute: () => async () => "ok",
+    });
+    await act(async () => {
+      render(
+        <ModelContext tools={[t]}>
+          <Probe />
+        </ModelContext>,
+      );
+    });
+    expect(seen.map((x) => x.name)).toEqual(["bridge_tool"]);
+  });
+
   it.each(["addEventListener", "removeEventListener"])(
     "keeps registration and tool listing working without %s",
     async (method) => {
