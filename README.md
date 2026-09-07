@@ -22,6 +22,15 @@ in the user's own session. No extra server, no OAuth, no second API surface.
 - **Manifest** — a route handler serves `/.well-known/webmcp.json` from the same tool definitions.
 - **DevTools** — a dev-only panel built on `getTools()`, `toolchange`, and `executeTool()`.
 
+## Install
+
+```sh
+npm i nextjs-webmcp zod
+```
+
+Peer dependencies: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4` (JSON Schema conversion uses
+`z.toJSONSchema`). Node 22+.
+
 ## 30-second example
 
 One server action, one tool, one mount.
@@ -85,15 +94,6 @@ package earns its place on the parts that go wrong after the first tool:
 | Chrome 150 returns `undefined` from `registerTool()`, calls `execute` with one argument, and hands back `inputSchema` as a string.              | Handled. So is a browser whose `modelContext` is not an `EventTarget`.                                                                                     |
 | A runner panel, a call log, a manifest route, and JSX typings for `<form toolname>` are each an afternoon.                                      | `nextjs-webmcp/devtools`, `useToolCalls()`, `nextjs-webmcp/manifest`, `nextjs-webmcp/form`.                                                                |
 | `execute` receives `unknown`.                                                                                                                   | `execute` receives the type inferred from the Zod schema.                                                                                                  |
-
-## Install
-
-```sh
-npm i nextjs-webmcp zod
-```
-
-Peer dependencies: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4` (JSON Schema conversion uses
-`z.toJSONSchema`). Node 22+.
 
 ## Concepts
 
