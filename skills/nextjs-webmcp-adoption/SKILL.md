@@ -13,7 +13,7 @@ small, verifiable steps and keep the app's current UI untouched. The public API 
 
 - `next >= 15`, `react >= 19`, App Router (`app/` directory). Pages Router is not supported.
 - Zod 4 (`zod ^4`) for `z.toJSONSchema`; upgrade if the app is older.
-- Install: `pnpm add nextjs-webmcp zod` (or the app's package manager).
+- Install: `npm i nextjs-webmcp zod` (or the app's package manager).
 
 ## Step 1 — Inventory server actions and routes
 

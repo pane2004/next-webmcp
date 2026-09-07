@@ -4,7 +4,7 @@ Every public export, with its signature, behavior, and an example. For the pitch
 spec-alignment table see the [README](../README.md).
 
 ```sh
-pnpm add nextjs-webmcp zod
+npm i nextjs-webmcp zod
 ```
 
 Peers: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4`. Node 22+.

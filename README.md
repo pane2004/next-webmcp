@@ -124,7 +124,7 @@ Import `tools` inside a `"use client"` module (as above) and render `<ModelConte
 ## Install
 
 ```sh
-pnpm add nextjs-webmcp zod
+npm i nextjs-webmcp zod
 ```
 
 Peer dependencies: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4` (JSON Schema conversion uses
@@ -283,18 +283,6 @@ Chrome's WebMCP guidance, and where nextjs-webmcp implements it.
 3. **ChatGPT desktop browser** — supports WebMCP natively; open the site and ask it to complete a task.
 4. **Without a browser that supports WebMCP** — `<ModelContext>` is a no-op. Use `nextjs-webmcp/internal`'s
    `__resetForTests()` and a fake `document.modelContext` in Vitest (see [`test/`](./test)).
-
-### Verified against Chrome 150 (2026-09-04)
-
-The library is exercised on the live demo with the origin-trial token, not only against the in-memory fake.
-Four places where Chrome 150 differs from `webmcp-types@0.1.6`, and how `nextjs-webmcp` handles them:
-
-| Chrome 150 behavior                                                                        | What the library does                                                                                     |
-| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| `document.modelContext.registerTool()` returns `undefined`, not a `Promise`                | Wraps the call in `Promise.resolve()` and a `try/catch`, so a failed registration never unmounts the tree |
-| `execute(input)` is called with a single argument (no `{ signal }`)                        | Treats the per-call signal as optional and always merges it with the tool's own signal                    |
-| `executeTool()` accepts only the `RegisteredTool` object from `getTools()`                 | The DevTools runner resolves the name to the object before calling                                        |
-| `getTools()` returns `inputSchema` as a JSON string, `title` as `""`, and no `annotations` | `useModelContextTools()` parses string schemas and prefers the schema and annotations this app registered |
 
 ## Examples
 
