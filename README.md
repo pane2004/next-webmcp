@@ -316,13 +316,6 @@ Build the package before running or typechecking the examples; they resolve `nex
 - Cross-origin iframe tools (`exposedTo`).
 - Structured (non-string) tool results once the spec stabilizes them.
 
-## Prior art
-
-- [usewebmcp](https://github.com/topics/webmcp) — React hooks around `registerTool`. nextjs-webmcp adds route
-  scoping, server-action execution, `next/form`, DevTools, and the manifest.
-- [webmcp-react](https://github.com/topics/webmcp) — component-level tool registration for React.
-- [MCP-B](https://github.com/topics/mcp) — browser-side MCP servers exposed to extensions.
-
 ## License
 
 [MIT](./LICENSE). `examples/commerce` is derived from vercel/commerce; see
