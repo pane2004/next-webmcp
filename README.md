@@ -23,103 +23,52 @@ in the user's own session. No extra server, no OAuth, no second API surface.
 
 ## 30-second example
 
-```ts
-// app/schemas.ts — one schema for the tool and its action ("use server" files export only functions)
-import { z } from "zod";
+One server action, one tool, one mount.
 
-export const searchInput = z.object({
-  query: z.string().min(1).describe("Free-text search, e.g. 'blue slip-on shoes'"),
-  limit: z.number().int().min(1).max(20).default(10),
-});
+```ts
+// app/todo.ts — one schema for both sides ("use server" files can only export functions)
+import { z } from "zod";
+export const todoInput = z.object({ text: z.string().min(1).describe("What to do") });
 ```
 
 ```ts
 // app/actions.ts
 "use server";
-import { z } from "zod";
 import { toolAction } from "nextjs-webmcp/server";
-import { db } from "@/lib/db";
-import { searchInput } from "./schemas";
+import { todoInput } from "./todo";
 
-// Validates again on the server; resolves to { ok: true, data } | { ok: false, error }, never throws.
-export const searchProducts = toolAction(searchInput, ({ query, limit }) =>
-  db.products.search(query, { limit }),
-);
-export const startCheckout = toolAction(z.object({}), () => db.cart.checkout()); // → { url, total }
-```
-
-```ts
-// app/tools.ts
-import { z } from "zod";
-import { defineTools, navigationTool, tool, unwrap } from "nextjs-webmcp";
-import { searchProducts, startCheckout } from "./actions";
-import { searchInput } from "./schemas";
-
-export const tools = defineTools({
-  search_products: tool({
-    description: "Search the catalog by free-text query. Returns up to `limit` products.",
-    input: searchInput,
-    annotations: { readOnlyHint: true },
-    // unwrap() returns data, or throws the action's own sentence for the agent to read.
-    execute: () => async (input) => unwrap(await searchProducts(input)),
-  }),
-  navigate_to: navigationTool({
-    routes: [
-      { path: "/", description: "Home page." },
-      {
-        path: "/product/[handle]",
-        description: "A product page; adds add_to_cart.",
-        params: z.object({ handle: z.string() }),
-      },
-    ],
-  }),
-  start_checkout: tool({
-    title: "Start checkout",
-    description: "Take the user to checkout for the current cart.",
-    input: z.object({}),
-    execute: (ctx) => async () => {
-      const { url, total } = unwrap(await startCheckout({}));
-      setTimeout(() => ctx.router.push(url), 0); // navigate after the result is returned
-      return `Heading to checkout. Cart total: ${total}.`;
-    },
-  }),
-});
-```
-
-```tsx
-// app/providers.tsx
-"use client";
-import { ModelContext } from "nextjs-webmcp";
-import { WebMCPDevTools } from "nextjs-webmcp/devtools";
-import { tools } from "./tools";
-
-export function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <ModelContext tools={tools}>
-      {children}
-      <WebMCPDevTools />
-    </ModelContext>
-  );
-}
+export const addTodo = toolAction(todoInput, ({ text }) => db.todos.create({ text }));
 ```
 
 ```tsx
 // app/layout.tsx
-import { Providers } from "./providers";
+"use client";
+import { ModelContext, defineTools, tool, unwrap } from "nextjs-webmcp";
+import { addTodo } from "./actions";
+import { todoInput } from "./todo";
+
+const tools = defineTools({
+  add_todo: tool({
+    description: "Add a todo to the list.",
+    input: todoInput,
+    execute: () => async (input) => `Added todo #${unwrap(await addTodo(input)).id}.`,
+  }),
+});
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <ModelContext tools={tools}>{children}</ModelContext>
       </body>
     </html>
   );
 }
 ```
 
-Tool definitions hold Zod schemas and functions, which cannot cross the server → client boundary as props.
-Import `tools` inside a `"use client"` module (as above) and render `<ModelContext>` there.
+An agent in Chrome now sees `add_todo`, calls it with validated input, and the server action runs with
+the user's session. Mount a second `<ModelContext>` inside any page for tools that should exist only there.
+To keep the root layout a server component, move `tools` and the mount into a `"use client"` file.
 
 ## Install
 
