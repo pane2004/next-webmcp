@@ -55,7 +55,7 @@ export function createSearchTools(collections: Collection[]): ToolDef[] {
           .optional()
           .describe(`Collection handle or title. Available: ${collectionNames || "All"}.`),
       }),
-      execute: (ctx) => async (input) => {
+      execute: async (input, ctx) => {
         if (!input.sort && !input.collection) {
           return `Provide a sort, a collection, or both. Sorts: ${SORT_SLUGS.join(", ")}. Collections: ${collectionNames || "All"}.`;
         }

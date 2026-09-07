@@ -82,7 +82,7 @@ export const productTools = defineTools({
     description:
       "Add a variant of the product on this page to the cart. Returns the new cart size.",
     input: addToCartInput,
-    execute: (ctx) => async (input) => {
+    execute: async (input, ctx) => {
       const cart = unwrap(await addItem(input)); // throws the action's sentence on failure
       ctx.router.refresh();
       return `Added ${input.quantity}. Cart has ${cart.totalQuantity} items.`;
@@ -103,7 +103,8 @@ Checklist per tool:
   with the user's session.
 - Tools that navigate return their string first, then `setTimeout(() => ctx.router.push(url), 0)`
   (`navigationTool` does this for you).
-- Server actions behind tools are `toolAction(schema, handler)`; `execute` reads them with `unwrap()`. For
+- Server actions behind tools are `toolAction(schema, handler)`; return their result from `execute` (or
+  write `execute: action`) and it is unwrapped for the agent. Use `unwrap()` only to format `data`. For
   expected failures return a sentence from the handler or map thrown errors with `onError`; the library
   formats it for the agent.
 

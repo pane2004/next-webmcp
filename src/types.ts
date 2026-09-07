@@ -15,7 +15,7 @@ export type ToolAnnotations = {
   consequentialHint?: boolean;
 };
 
-/** Route-aware context handed to `execute(ctx)`. */
+/** Route-aware context handed to `execute(input, ctx)`. */
 export type ToolContext = {
   /** From `useParams()`, read when the tool runs. */
   params: ReturnType<typeof useParams>;
@@ -25,10 +25,9 @@ export type ToolContext = {
   searchParams: URLSearchParams;
   /** From `useRouter()` (`next/navigation`). */
   router: AppRouterInstance;
+  /** Aborted when the browser cancels the call or the tool unregisters. */
+  signal: AbortSignal;
 };
-
-/** Options passed to the tool executor. */
-export type ToolExecuteOptions = { signal: AbortSignal };
 
 /**
  * A Zod schema with its input/output erased so heterogeneous tools can share one array.
@@ -54,9 +53,15 @@ export type ToolDef<TInput extends z.ZodTypeAny = AnyZodSchema> = {
   /** Zod schema, converted to JSON Schema via `z.toJSONSchema` (Zod 4). */
   readonly input: TInput;
   readonly annotations?: ToolAnnotations;
+  /**
+   * Runs the validated call. Return a string for the agent, an object (sent as JSON), or the
+   * `ToolActionResult` of a `toolAction()` server action, which is unwrapped for you: `data`
+   * becomes the result and `error` becomes `<name> failed: <error>`.
+   */
   readonly execute: (
+    input: z.infer<TInput>,
     ctx: ToolContext,
-  ) => (input: z.infer<TInput>, opts: ToolExecuteOptions) => Promise<string | object>;
+  ) => Promise<string | object> | string | object;
 };
 
 /** One entry in the call log (`useToolCalls()`). */

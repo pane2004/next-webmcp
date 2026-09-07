@@ -10,7 +10,8 @@ in the user's own session. No extra server, no OAuth, no second API surface.
 
 - **Route-scoped** — tools register when a segment mounts and unregister when it unmounts. An agent on
   `/product/shoes` sees `add_to_cart`; an agent on `/` does not.
-- **Server actions as `execute`** — the tool body is the same `"use server"` function your buttons call.
+- **Server actions as `execute`** — `execute: addTodo` is a complete tool body. The result is unwrapped
+  and a server-side rejection reaches the agent as a sentence it can act on.
 - **Validated on the server too** — `toolAction()` from `nextjs-webmcp/server` wraps the action with the
   same Zod schema and resolves to `{ ok, data | error }` instead of throwing.
 - **Zod in, JSON Schema out** — `input: z.object(...)` becomes the tool's `inputSchema`.
@@ -43,7 +44,7 @@ export const addTodo = toolAction(todoInput, ({ text }) => db.todos.create({ tex
 ```tsx
 // app/layout.tsx
 "use client";
-import { ModelContext, defineTools, tool, unwrap } from "nextjs-webmcp";
+import { ModelContext, defineTools, tool } from "nextjs-webmcp";
 import { addTodo } from "./actions";
 import { todoInput } from "./todo";
 
@@ -51,7 +52,7 @@ const tools = defineTools({
   add_todo: tool({
     description: "Add a todo to the list.",
     input: todoInput,
-    execute: () => async (input) => `Added todo #${unwrap(await addTodo(input)).id}.`,
+    execute: addTodo,
   }),
 });
 
@@ -66,9 +67,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-An agent in Chrome now sees `add_todo`, calls it with validated input, and the server action runs with
-the user's session. Mount a second `<ModelContext>` inside any page for tools that should exist only there.
-To keep the root layout a server component, move `tools` and the mount into a `"use client"` file.
+An agent in Chrome now sees `add_todo`. The library validates the agent's arguments, runs the server
+action in the user's session, hands the new todo back as JSON, and turns a server-side rejection into a
+sentence the agent can act on. Mount a second `<ModelContext>` inside any page for tools that should exist
+only there. To keep the root layout a server component, move `tools` and the mount into a `"use client"`
+file.
+
+## Why not call `document.modelContext` yourself?
+
+You can. The example above is about 40 lines with the raw API, so the saving on a single tool is small. The
+package earns its place on the parts that go wrong after the first tool:
+
+| Without the package                                                                                                                             | With it                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A server action that throws reaches the agent as "an error occurred": Next.js redacts the message in production, so the agent cannot recover.   | `toolAction()` returns the Zod path and message as a sentence, and `execute` hands it to the agent unchanged. The agent fixes its arguments and retries.   |
+| A `useEffect` that registers a tool re-registers whenever its closure changes. A product-page tool vanishes and reappears on every cart update. | Registration is keyed by the tool's identity, and each call reads the newest closure. A re-render, a new array, or a navigation never touches the browser. |
+| Chrome 150 returns `undefined` from `registerTool()`, calls `execute` with one argument, and hands back `inputSchema` as a string.              | Handled. So is a browser whose `modelContext` is not an `EventTarget`.                                                                                     |
+| A runner panel, a call log, a manifest route, and JSX typings for `<form toolname>` are each an afternoon.                                      | `nextjs-webmcp/devtools`, `useToolCalls()`, `nextjs-webmcp/manifest`, `nextjs-webmcp/form`.                                                                |
+| `execute` receives `unknown`.                                                                                                                   | `execute` receives the type inferred from the Zod schema.                                                                                                  |
 
 ## Install
 
@@ -101,15 +117,16 @@ The [API reference](./docs/api.md#modelcontext-tools-children-) explains which o
 
 ### Server actions as `execute`
 
-`execute` is curried: `execute: (ctx) => async (input, { signal }) => ...`. The outer function receives the
-route context. The inner function receives validated input. Call server actions from it directly. They run
-with the user's cookies and session, so an agent can do only what the signed-in user can do.
+`execute(input, ctx)` receives the validated input and the route context (`params`, `pathname`,
+`searchParams`, `router`, `signal`). Call server actions from it directly. They run with the user's cookies
+and session, so an agent can do only what the signed-in user can do.
 
 Every call follows the same steps:
 
 1. Parse the input with the Zod schema. Invalid input returns a sentence that asks the agent to fix the
    arguments.
-2. Run `execute`. An object result becomes JSON.
+2. Run `execute`. A `toolAction()` result is unwrapped: `data` becomes the result and `error` becomes the
+   failure sentence in step 3. Any other object becomes JSON.
 3. A thrown error becomes `<name> failed: <message>. Check the page state and try again.` The agent never
    sees a stack trace.
 4. The call is added to the log behind `useToolCalls()`.
@@ -129,8 +146,10 @@ the handler, and can check the result against `options.output`.
 
 `toolAction` never throws. It always resolves to `{ ok: true, data }` or `{ ok: false, error }`, because
 Next.js redacts thrown server-action errors in production and an agent would read only "an error occurred".
-Inside `execute`, `unwrap(result)` returns `data` or throws `Error(error)`. The pipeline above turns that
-throw into `<name> failed: <error>`, so the agent reads the server's own sentence.
+Return that result from `execute` as it is, or `execute: addTodo` when the action is the whole tool. The
+pipeline unwraps `data` and turns `error` into `<name> failed: <error>`, so the agent reads the server's own
+sentence. Call `unwrap(result)` only when you want to format `data` yourself: it returns `data` or throws
+`Error(error)`.
 
 Keep the schema in a plain module that both files import. A `"use server"` file can export only async
 functions.
@@ -192,7 +211,7 @@ Full reference with signatures and examples: **[docs/api.md](./docs/api.md)**.
 |                          | `isModelContextAvailable()`            | Feature detection.                                                                        |
 |                          | `NextWebMCPError`                      | `Error` with a stable `code`.                                                             |
 |                          | `navigationTool(options)`              | A `navigate_to` tool from an allowlist of route patterns; pushes after returning.         |
-|                          | `unwrap(result)`                       | `data` of a `ToolActionResult`, or throws its `error` for the agent to read.              |
+|                          | `unwrap(result)`                       | `data` of a `ToolActionResult`, or throws its `error`. Only needed to format `data`.      |
 | `nextjs-webmcp/server`   | `toolAction(input, handler, options?)` | Wraps a server action: validates input (and output), resolves to `{ ok, data \| error }`. |
 | `nextjs-webmcp/form`     | `Form` (default)                       | `next/form` plus the WebMCP attributes; handles `respondWith`.                            |
 | `nextjs-webmcp/manifest` | `createManifestHandler()`              | GET route handler for `/.well-known/webmcp.json`.                                         |
@@ -291,7 +310,6 @@ Build the package before running or typechecking the examples; they resolve `nex
 
 ## Roadmap
 
-- Flat `execute(input, ctx)` in place of the curried form.
 - `ctx.navigate(url)`: navigate after the result is returned, without the `setTimeout` idiom.
 - `"use tool"` directive with build-time discovery of tool files.
 - Pages Router support.

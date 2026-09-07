@@ -46,22 +46,22 @@ export const getTime = tool({
   description: "Return the current time in the browser as an ISO-8601 string.",
   input: z.object({}),
   annotations: { readOnlyHint: true },
-  execute: () => async () => new Date().toISOString(),
+  execute: async () => new Date().toISOString(),
 });
 ```
 
 `ToolDef<TInput>` fields:
 
-| Field          | Type                                                                     | Notes                                                       |
-| -------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------- |
-| `name?`        | `string`                                                                 | `[A-Za-z0-9_.-]{1,128}`; defaults to the `defineTools` key. |
-| `title?`       | `string`                                                                 | Used in DevTools.                                           |
-| `description`  | `string`                                                                 | Read by the agent. State what it does and what it returns.  |
-| `input`        | `z.ZodTypeAny`                                                           | Converted with `z.toJSONSchema` (Zod 4).                    |
-| `annotations?` | `{ readOnlyHint?, untrustedContentHint?, consequentialHint? }`           | Forwarded to Chrome.                                        |
-| `execute`      | `(ctx: ToolContext) => (input, { signal }) => Promise<string \| object>` | Objects are `JSON.stringify`ed.                             |
+| Field          | Type                                                                         | Notes                                                         |
+| -------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `name?`        | `string`                                                                     | `[A-Za-z0-9_.-]{1,128}`; defaults to the `defineTools` key.   |
+| `title?`       | `string`                                                                     | Used in DevTools.                                             |
+| `description`  | `string`                                                                     | Read by the agent. State what it does and what it returns.    |
+| `input`        | `z.ZodTypeAny`                                                               | Converted with `z.toJSONSchema` (Zod 4).                      |
+| `annotations?` | `{ readOnlyHint?, untrustedContentHint?, consequentialHint? }`               | Forwarded to Chrome.                                          |
+| `execute`      | `(input, ctx: ToolContext) => Promise<string \| object> \| string \| object` | A `ToolActionResult` is unwrapped; other objects become JSON. |
 
-`ToolContext`, passed to `execute(ctx)`:
+`ToolContext`, passed to `execute(input, ctx)`:
 
 | Field          | Source                                                                            |
 | -------------- | --------------------------------------------------------------------------------- |
@@ -69,6 +69,7 @@ export const getTime = tool({
 | `pathname`     | `usePathname()`, as of the call                                                   |
 | `searchParams` | `URLSearchParams` of the current URL, read when the tool runs                     |
 | `router`       | `useRouter()` from `next/navigation`, as of the call                              |
+| `signal`       | `AbortSignal`, aborted when the browser cancels the call or the tool unregisters  |
 
 The context is built when a call arrives, not when the tool is registered, so a tool registered by a layout
 sees the route the user is on now.
@@ -86,7 +87,7 @@ export const tools = defineTools({
     description: "Return the current cart as JSON.",
     input: z.object({}),
     annotations: { readOnlyHint: true },
-    execute: () => async () => ({ items: [], total: "0.00" }),
+    execute: async () => ({ items: [], total: "0.00" }),
   }),
 });
 ```
@@ -185,14 +186,15 @@ route handler.
 ### `unwrap(result)`
 
 Returns `result.data` of a [`ToolActionResult`](#nextjs-webmcpserver), or throws `Error(result.error)`.
-Inside a tool's `execute` that throw becomes `<name> failed: <error>. Check the page state and try again.`,
-so the agent reads the sentence the server action produced.
+You only need it to format `data` yourself. Returning the result from `execute` unchanged (or writing
+`execute: searchProducts`) has the same effect: `<ModelContext>` unwraps it, and `error` becomes
+`<name> failed: <error>. Check the page state and try again.`
 
 ```ts
 import { unwrap } from "nextjs-webmcp";
 import { searchProducts } from "./actions"; // toolAction(...)
 
-execute: () => async (input) => {
+execute: async (input) => {
   const hits = unwrap(await searchProducts(input));
   // agent reads: "search_products failed: Invalid input: query: Too small: … Fix the arguments and call again."
   return hits.length ? JSON.stringify(hits) : `No products matched "${input.query}".`;
@@ -258,10 +260,12 @@ Execution pipeline per call:
 1. `await def.input.safeParseAsync(raw)` — async refinements work here too, so one schema can serve the tool
    and its `toolAction`; on failure the agent gets
    `Invalid input for <name>: <path>: <message>; … Fix the arguments and call again.`
-2. `await def.execute(ctx)(parsed, { signal })` — the latest definition, the current route context, and the
-   tool's own signal merged with the per-call one; strings pass through, objects are stringified.
-3. Thrown errors become `<name> failed: <message>. Check the page state and try again.` No stack traces.
-4. The call is appended to the 200-entry ring buffer behind `useToolCalls()`.
+2. `await def.execute(parsed, ctx)` — the latest definition and the current route context; `ctx.signal` is
+   the tool's own signal merged with the per-call one.
+3. A `{ ok: true, data }` result becomes `data`; `{ ok: false, error }` throws `Error(error)`. Strings pass
+   through, other objects are stringified.
+4. Thrown errors become `<name> failed: <message>. Check the page state and try again.` No stack traces.
+5. The call is appended to the 200-entry ring buffer behind `useToolCalls()`.
 
 ### `useToolCalls()`
 
@@ -355,7 +359,7 @@ try {
 
 ### Types
 
-`ToolDef`, `ToolContext`, `ToolAnnotations`, `ToolExecuteOptions`, `ToolCallRecord`,
+`ToolDef`, `ToolContext`, `ToolAnnotations`, `ToolCallRecord`,
 `RegisteredToolInfo`, `ModelContextProps`, `NavigationRoute`, `ToolActionResult`, `NextWebMCPErrorCode`,
 `AppRouterInstance`, `AnyZodSchema`.
 

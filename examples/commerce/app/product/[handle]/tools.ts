@@ -154,7 +154,7 @@ export function createProductTools(product: Product, cartApi: CartApi): ToolDef[
         "Read the product on the current page: title, description, price range, options with their values, every variant with price and stock, and which options are currently selected. Call it before add_to_cart when you need to pick a Color or Size.",
       input: z.object({}),
       annotations: { readOnlyHint: true, untrustedContentHint: true },
-      execute: (ctx) => async () => {
+      execute: async (_input, ctx) => {
         const selectedOptions = selectedFromSearchParams(product, ctx.searchParams);
         const selectedVariant = product.variants.find((variant) =>
           variant.selectedOptions.every(
@@ -201,7 +201,7 @@ export function createProductTools(product: Product, cartApi: CartApi): ToolDef[
           ),
         quantity: z.number().int().min(1).default(1).describe("How many to add (default 1)."),
       }),
-      execute: (ctx) => async (input) => {
+      execute: async (input, ctx) => {
         const resolved = resolveVariant(product, input.options, ctx.searchParams);
         if (resolved.kind === "error") return resolved.message;
 

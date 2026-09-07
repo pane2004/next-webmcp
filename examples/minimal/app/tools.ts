@@ -12,14 +12,14 @@ export const tools = defineTools({
     description: "Return the current time in the user's browser as an ISO-8601 string.",
     input: z.object({}),
     annotations: { readOnlyHint: true },
-    execute: () => async () => new Date().toISOString(),
+    execute: async () => new Date().toISOString(),
   }),
 
   add_todo: tool({
     title: "Add todo",
     description: "Add a todo item to the list on this page.",
     input: todoInput,
-    execute: (ctx) => async (input) => {
+    execute: async (input, ctx) => {
       // The action validates again on the server; unwrap() throws its sentence if it failed.
       const todo = unwrap(await addTodo(input));
       // Refresh after returning so the agent receives the result even if the refresh re-renders the route.

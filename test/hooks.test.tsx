@@ -49,7 +49,7 @@ describe("useModelContextTools()", () => {
         name: "bridge_tool",
         description: "Available through a browser bridge",
         input: z.object({}),
-        execute: () => async () => "ok",
+        execute: async () => "ok",
       });
       await act(async () => {
         render(
@@ -78,7 +78,7 @@ describe("useModelContextTools()", () => {
       name: "bridge_tool",
       description: "Available through a browser bridge",
       input: z.object({}),
-      execute: () => async () => "ok",
+      execute: async () => "ok",
     });
     await act(async () => {
       render(
@@ -103,7 +103,7 @@ describe("useModelContextTools()", () => {
         name: "bridge_tool",
         description: "Available through a browser bridge",
         input: z.object({}),
-        execute: () => async () => "ok",
+        execute: async () => "ok",
       });
       await act(async () => {
         render(
@@ -131,7 +131,7 @@ describe("useModelContextTools()", () => {
       title: "Zeta",
       description: "Z",
       input: z.object({}),
-      execute: () => async () => "",
+      execute: async () => "",
     });
     await act(async () => {
       render(
@@ -163,7 +163,7 @@ describe("useModelContextTools() on Chrome 150", () => {
       description: "Ours",
       input: z.object({ q: z.string().describe("Query") }),
       annotations: { readOnlyHint: true },
-      execute: () => async () => "",
+      execute: async () => "",
     });
     await act(async () => {
       render(

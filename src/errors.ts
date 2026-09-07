@@ -15,7 +15,7 @@ export type NextWebMCPErrorCode =
  * @example
  * ```ts
  * try {
- *   tool({ name: "bad name!", description: "…", input: z.object({}), execute: () => async () => "" });
+ *   tool({ name: "bad name!", description: "…", input: z.object({}), execute: async () => "" });
  * } catch (err) {
  *   if (err instanceof NextWebMCPError && err.code === "TOOL_NAME_INVALID") {
  *     // …

@@ -34,7 +34,7 @@ export function createRootTools(cartApi: CartApi): ToolDef[] {
       // The same schema guards the server action, so the arguments are validated on both sides.
       input: searchProductsInput,
       annotations: { readOnlyHint: true, untrustedContentHint: true },
-      execute: () => async (input) => {
+      execute: async (input) => {
         // unwrap() throws the action's own sentence on failure, which <ModelContext> hands to the agent.
         const hits = unwrap(await searchProducts(input));
         if (hits.length === 0) {
@@ -49,7 +49,7 @@ export function createRootTools(cartApi: CartApi): ToolDef[] {
         "Read the shopping cart: each line's item name, quantity, unit price and line total, plus the subtotal and total quantity. Use the returned item names with update_quantity or remove_item.",
       input: z.object({}),
       annotations: { readOnlyHint: true },
-      execute: () => async () => {
+      execute: async () => {
         const { cart } = cartApi;
         if (!cart || cart.lines.length === 0) {
           return "The cart is empty.";
@@ -107,7 +107,7 @@ export function createRootTools(cartApi: CartApi): ToolDef[] {
           .describe('Item name as shown by get_cart, e.g. "Acme Shirt (Blue / M)".'),
         quantity: z.number().int().min(0).describe("New quantity for the item; 0 removes it."),
       }),
-      execute: () => async (input) => {
+      execute: async (input) => {
         const { cart, updateCartItem } = cartApi;
         const match = matchCartLine(cart, input.item);
         if (match.kind === "error") return match.message;
@@ -154,7 +154,7 @@ export function createRootTools(cartApi: CartApi): ToolDef[] {
           .min(1)
           .describe('Item name as shown by get_cart, e.g. "Acme Shirt (Blue / M)".'),
       }),
-      execute: () => async (input) => {
+      execute: async (input) => {
         const { cart, updateCartItem } = cartApi;
         const match = matchCartLine(cart, input.item);
         if (match.kind === "error") return match.message;
@@ -178,7 +178,7 @@ export function createRootTools(cartApi: CartApi): ToolDef[] {
       description:
         "Hand the current cart to checkout and open the checkout page. Requires at least one item in the cart.",
       input: z.object({}),
-      execute: (ctx) => async () => {
+      execute: async (_input, ctx) => {
         const { cart } = cartApi;
         if (!cart || cart.lines.length === 0) {
           return "The cart is empty. Add an item before starting checkout.";

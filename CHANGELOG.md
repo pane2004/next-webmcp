@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+- **Breaking:** `execute` is `(input, ctx)` instead of `(ctx) => (input, { signal })`. `ctx.signal`
+  replaces the options object. `ToolExecuteOptions` is gone.
+- `execute` may return a `toolAction()` result as is: `data` becomes the tool result and `error` becomes
+  the failure sentence. `execute: myAction` is a complete tool body. `unwrap()` stays for formatting.
+
 ## 0.1.0 (2026-09-07)
 
 Initial release.

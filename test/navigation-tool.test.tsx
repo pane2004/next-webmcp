@@ -66,6 +66,7 @@ function directCtx(): ToolContext {
     pathname: "/",
     searchParams: new URLSearchParams(),
     router: nav.router as unknown as ToolContext["router"],
+    signal: new AbortController().signal,
   };
 }
 
@@ -128,9 +129,9 @@ describe("navigationTool()", () => {
       routes: [{ path: "/product/[handle]", description: "Product." }],
     });
     await expect(
-      def.execute(directCtx())(
+      def.execute(
         { route: "/product/[handle]", params: { handle: "../..//evil.com?x#y" } },
-        { signal: new AbortController().signal },
+        directCtx(),
       ),
     ).resolves.toBe("Navigating to /product/..%2F..%2F%2Fevil.com%3Fx%23y.");
   });
@@ -170,9 +171,7 @@ describe("navigationTool()", () => {
       /^Invalid input for navigate_to: route: /,
     );
     // Called directly, execute lists the allowlist.
-    await expect(
-      def.execute(directCtx())({ route: "/nope" }, { signal: new AbortController().signal }),
-    ).resolves.toBe(
+    await expect(def.execute({ route: "/nope" }, directCtx())).resolves.toBe(
       'Unknown route "/nope". Available: /, /search, /product/[handle], /docs/[...slug].',
     );
     await tick();
@@ -235,12 +234,13 @@ describe("navigationTool()", () => {
       routes: [{ path: "/docs/[[...slug]]", description: "Docs." }],
     });
     expect(def.description).toContain("- /docs/[[...slug]] — Docs. Optional params: slug.");
-    const run = def.execute(directCtx());
-    const opts = { signal: new AbortController().signal };
-    await expect(run({ route: "/docs/[[...slug]]" }, opts)).resolves.toBe("Navigating to /docs.");
-    await expect(run({ route: "/docs/[[...slug]]", params: { slug: "a/b" } }, opts)).resolves.toBe(
-      "Navigating to /docs/a/b.",
+    const ctx = directCtx();
+    await expect(def.execute({ route: "/docs/[[...slug]]" }, ctx)).resolves.toBe(
+      "Navigating to /docs.",
     );
+    await expect(
+      def.execute({ route: "/docs/[[...slug]]", params: { slug: "a/b" } }, ctx),
+    ).resolves.toBe("Navigating to /docs/a/b.");
   });
 
   it("throws TOOL_NAME_INVALID for an empty allowlist or a bad name", () => {

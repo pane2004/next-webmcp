@@ -29,17 +29,14 @@ const echo = tool({
   title: "Echo",
   description: "Echoes text",
   input: z.object({ text: z.string() }),
-  execute:
-    () =>
-    async ({ text }) =>
-      `echo: ${text}`,
+  execute: async ({ text }) => `echo: ${text}`,
 });
 
 const other = tool({
   name: "other",
   description: "Another tool",
   input: z.object({}),
-  execute: () => async () => "other",
+  execute: async () => "other",
 });
 
 /** Signals that were aborted, across every registerTool call the fake has seen. */
@@ -76,7 +73,7 @@ describe("<ModelContext>", () => {
       description: "Reads",
       input: z.object({ id: z.string() }),
       annotations: { readOnlyHint: true },
-      execute: () => async () => "ok",
+      execute: async () => "ok",
     });
     render(<ModelContext tools={[annotated]} />);
     const native = fake.tools.get("ro");
@@ -111,25 +108,25 @@ describe("<ModelContext>", () => {
       name: "a",
       description: "A",
       input: z.object({}),
-      execute: () => async () => "a",
+      execute: async () => "a",
     });
     const b = tool({
       name: "b",
       description: "B",
       input: z.object({}),
-      execute: () => async () => "b",
+      execute: async () => "b",
     });
     const dup1 = tool({
       name: "dup",
       description: "outer",
       input: z.object({}),
-      execute: () => async () => "outer",
+      execute: async () => "outer",
     });
     const dup2 = tool({
       name: "dup",
       description: "inner",
       input: z.object({}),
-      execute: () => async () => "inner",
+      execute: async () => "inner",
     });
     render(
       <ModelContext tools={[a, dup1]}>
@@ -146,12 +143,12 @@ describe("<ModelContext>", () => {
       name: "dup",
       description: "outer",
       input: z.object({}),
-      execute: () => async () => "outer",
+      execute: async () => "outer",
     });
     const dupInner = tool({
       ...dupOuter,
       description: "inner",
-      execute: () => async () => "inner",
+      execute: async () => "inner",
     });
 
     it("the outer instance wins when both mount in the same commit (child effects run first)", async () => {
@@ -201,7 +198,7 @@ describe("<ModelContext>", () => {
         name: "whoami",
         description: "Returns the route id",
         input: z.object({}),
-        execute: (ctx) => async () => `${ctx.pathname}:${String(ctx.params["id"])}`,
+        execute: async (_input, ctx) => `${ctx.pathname}:${String(ctx.params["id"])}`,
       });
       nav.params = { id: "1" };
       nav.pathname = "/items/1";
@@ -225,7 +222,7 @@ describe("<ModelContext>", () => {
         name: "a",
         description: "A",
         input: z.object({}),
-        execute: () => async () => "a",
+        execute: async () => "a",
       });
       const a2 = tool({ ...a1, description: "A (changed)" });
       const { rerender } = render(<ModelContext tools={[a1, other]} />);
@@ -248,7 +245,7 @@ describe("<ModelContext>", () => {
         name: "s",
         description: "S",
         input: z.object({ q: z.string() }),
-        execute: () => async () => "",
+        execute: async () => "",
       });
       const v2 = tool({ ...v1, input: z.object({ q: z.string(), limit: z.number() }) });
       const { rerender } = render(<ModelContext tools={[v1]} />);
@@ -288,7 +285,7 @@ describe("<ModelContext>", () => {
           name: "buy",
           description: "Buy the product on this page",
           input: z.object({}),
-          execute: () => async () => `bought ${product}`,
+          execute: async () => `bought ${product}`,
         }),
       ];
       const { rerender } = render(<ModelContext tools={makeTools("shoe")} />);
@@ -335,10 +332,7 @@ describe("<ModelContext>", () => {
       input: z.object({
         handle: z.string().refine(async (h) => h !== "taken", { message: "Handle is taken" }),
       }),
-      execute:
-        () =>
-        async ({ handle }) =>
-          `claimed ${handle}`,
+      execute: async ({ handle }) => `claimed ${handle}`,
     });
     render(<ModelContext tools={[claim]} />);
     await expect(fake.executeTool("claim", JSON.stringify({ handle: "free" }))).resolves.toBe(
@@ -355,7 +349,7 @@ describe("<ModelContext>", () => {
       name: "obj",
       description: "Object",
       input: z.object({}),
-      execute: () => async () => ({ a: 1, b: [2] }),
+      execute: async () => ({ a: 1, b: [2] }),
     });
     render(<ModelContext tools={[obj]} />);
     await expect(fake.executeTool("obj", "{}")).resolves.toBe('{"a":1,"b":[2]}');
@@ -366,7 +360,7 @@ describe("<ModelContext>", () => {
       name: "boom",
       description: "Throws",
       input: z.object({}),
-      execute: () => async () => {
+      execute: async () => {
         throw new Error("kaboom");
       },
     });
@@ -401,7 +395,7 @@ describe("<ModelContext>", () => {
       name: "search",
       description: "Search",
       input: z.object({}),
-      execute: (ctx) => async () => {
+      execute: async (_input, ctx) => {
         ctx.router.push("/results");
         return ctx.searchParams.get("q") ?? "";
       },
@@ -425,9 +419,36 @@ describe("<ModelContext>", () => {
 
   it("skips tools with invalid or missing names with a warning", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const unnamed = { description: "no name", input: z.object({}), execute: () => async () => "" };
+    const unnamed = { description: "no name", input: z.object({}), execute: async () => "" };
     render(<ModelContext tools={[unnamed, { ...unnamed, name: "bad name!" }]} />);
     expect(fake.tools.size).toBe(0);
     expect(warn).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("execute results", () => {
+  const mount = (execute: Parameters<typeof tool>[0]["execute"]) =>
+    render(
+      <ModelContext
+        tools={[tool({ name: "act", description: "Acts", input: z.object({}), execute })]}
+      />,
+    );
+
+  it("unwraps { ok: true, data } from a toolAction() result", async () => {
+    mount(async () => ({ ok: true, data: { id: 1 } }));
+    await expect(fake.executeTool("act", "{}")).resolves.toBe('{"id":1}');
+  });
+
+  it("turns { ok: false, error } into the failure sentence", async () => {
+    mount(async () => ({ ok: false, error: "Nope" }));
+    await expect(fake.executeTool("act", "{}")).resolves.toBe(
+      "act failed: Nope. Check the page state and try again.",
+    );
+    expect(registry.getState().calls[0]?.ok).toBe(false);
+  });
+
+  it("passes an AbortSignal in ctx and leaves other objects alone", async () => {
+    mount(async (_input, ctx) => ({ signal: ctx.signal instanceof AbortSignal, ok: "yes" }));
+    await expect(fake.executeTool("act", "{}")).resolves.toBe('{"signal":true,"ok":"yes"}');
   });
 });

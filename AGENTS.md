@@ -45,7 +45,8 @@ pnpm lint | pnpm format          # prettier --check . | prettier --write .
 - Small single-purpose modules. Naming and shape follow next-intl, nuqs, next-safe-action.
 - Tool results are strings. Errors returned to agents are sentences, never stack traces. Server actions
   behind tools go through `toolAction()` so they validate again on the server and return
-  `{ ok, data | error }` instead of throwing; tools read that with `unwrap()`.
+  `{ ok, data | error }` instead of throwing; `execute` returns that result (it is unwrapped) or
+  calls `unwrap()` to format `data`.
 - Tools that navigate return their result first and push in `setTimeout(…, 0)`; `navigationTool()` does
   this for an allowlist of route patterns — do not hand-roll path parsing in an example.
 - `<ModelContext>` registers by tool identity (name, title, description, input schema, annotations) with one
@@ -77,7 +78,7 @@ Never run `git commit` or `git push` on behalf of a user unless asked. Never del
    action is the tool body.
 3. Add the tool to that segment's `tools.ts` with `defineTools`/`tool`: the shared Zod `input`, a description
    that says what it does and returns, `annotations.readOnlyHint` for reads, and
-   `unwrap(await action(input))` in `execute`. For moving between pages add one
+   `execute: action` or `unwrap(await action(input))` in `execute`. For moving between pages add one
    `navigationTool({ routes })` at the root instead of a per-page navigation tool.
 4. Mount it: a `"use client"` wrapper renders `<ModelContext tools={...}>` around the segment's children. Tools
    built from props (`createProductTools(product)`) go through `useMemo`; a new array or a new closure with

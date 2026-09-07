@@ -5,6 +5,7 @@ import { useParams, usePathname, useRouter } from "next/navigation";
 import { NextWebMCPError, errorMessage, isDev, warnOnce } from "./errors";
 import { getModelContext } from "./native";
 import { nextId, registry } from "./registry";
+import { isToolActionResult } from "./action-result";
 import { formatZodIssues, toolInputToJsonSchema } from "./schema";
 import { TOOL_NAME_PATTERN } from "./tool";
 import type { AppRouterInstance, ToolContext, ToolDef } from "./types";
@@ -25,7 +26,7 @@ type RunOptions = {
   ctx: ToolContext;
 };
 
-/** Runs one tool call: validate → execute → log. */
+/** Runs one tool call: validate → execute → unwrap a ToolActionResult → log. */
 async function runTool({ def, name, route, raw, signal, ctx }: RunOptions): Promise<string> {
   const startedAt = Date.now();
   let ok = true;
@@ -37,7 +38,11 @@ async function runTool({ def, name, route, raw, signal, ctx }: RunOptions): Prom
       ok = false;
       output = `Invalid input for ${name}: ${formatZodIssues(parsed.error.issues)}. Fix the arguments and call again.`;
     } else {
-      const result = await def.execute(ctx)(parsed.data, { signal });
+      let result: unknown = await def.execute(parsed.data, ctx);
+      if (isToolActionResult(result)) {
+        if (!result.ok) throw new Error(result.error);
+        result = result.data;
+      }
       output = typeof result === "string" ? result : (JSON.stringify(result) ?? String(result));
     }
   } catch (err) {
@@ -229,6 +234,7 @@ export function ModelContext({ tools, children }: ModelContextProps): React.JSX.
               typeof window === "undefined" ? "" : window.location.search,
             ),
             router: current.router,
+            signal,
           };
           return runTool({
             def: current.defsByName.get(name) ?? def,

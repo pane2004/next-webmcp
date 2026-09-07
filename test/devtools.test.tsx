@@ -21,10 +21,7 @@ const greet = tool({
   name: "greet",
   description: "greet someone",
   input: z.object({ who: z.string().describe("Name"), loud: z.boolean().optional() }),
-  execute:
-    () =>
-    async ({ who }) =>
-      `hi ${who}`,
+  execute: async ({ who }) => `hi ${who}`,
 });
 
 describe("WebMCPDevTools", () => {

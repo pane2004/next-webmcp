@@ -20,7 +20,7 @@ const newsletterFormTool = tool({
   name: "subscribe_newsletter",
   description: "Subscribe an email address to the Acme newsletter.",
   input: newsletterInput,
-  execute: () => async () => "Handled by the declarative <form toolname> in the footer.",
+  execute: async () => "Handled by the declarative <form toolname> in the footer.",
 });
 
 /**

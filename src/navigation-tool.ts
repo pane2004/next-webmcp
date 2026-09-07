@@ -204,7 +204,7 @@ export function navigationTool(options: {
     name,
     description,
     input,
-    execute: (ctx: ToolContext) => async (call) => {
+    execute: async (call, ctx: ToolContext) => {
       const route = routes.find((candidate) => candidate.path === call.route);
       if (!route) {
         return `Unknown route "${call.route}". Available: ${available}.`;

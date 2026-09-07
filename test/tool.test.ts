@@ -9,7 +9,7 @@ describe("tool()", () => {
       name: "add",
       description: "Adds",
       input: z.object({ a: z.number(), b: z.number().optional() }),
-      execute: () => async (input) => {
+      execute: async (input) => {
         expectTypeOf(input).toEqualTypeOf<{ a: number; b?: number | undefined }>();
         return String(input.a + (input.b ?? 0));
       },
@@ -25,11 +25,11 @@ describe("tool()", () => {
         name: "bad name!",
         description: "x",
         input: z.object({}),
-        execute: () => async () => "",
+        execute: async () => "",
       }),
     ).toThrowError(NextWebMCPError);
     try {
-      tool({ name: "", description: "x", input: z.object({}), execute: () => async () => "" });
+      tool({ name: "", description: "x", input: z.object({}), execute: async () => "" });
     } catch (err) {
       expect((err as NextWebMCPError).code).toBe("TOOL_NAME_INVALID");
     }
@@ -38,7 +38,7 @@ describe("tool()", () => {
         name: "a".repeat(129),
         description: "x",
         input: z.object({}),
-        execute: () => async () => "",
+        execute: async () => "",
       }),
     ).toThrow();
     expect(() =>
@@ -46,7 +46,7 @@ describe("tool()", () => {
         name: "ok_name-1.2",
         description: "x",
         input: z.object({}),
-        execute: () => async () => "",
+        execute: async () => "",
       }),
     ).not.toThrow();
   });
@@ -58,13 +58,13 @@ describe("defineTools()", () => {
       search: tool({
         description: "Search",
         input: z.object({ q: z.string() }),
-        execute: () => async () => "",
+        execute: async () => "",
       }),
       explicit: tool({
         name: "other",
         description: "Other",
         input: z.object({}),
-        execute: () => async () => "",
+        execute: async () => "",
       }),
     });
     expect(tools.map((t) => t.name)).toEqual(["search", "other"]);
@@ -73,7 +73,7 @@ describe("defineTools()", () => {
   it("validates key-derived names", () => {
     expect(() =>
       defineTools({
-        "bad key": { description: "x", input: z.object({}), execute: () => async () => "" },
+        "bad key": { description: "x", input: z.object({}), execute: async () => "" },
       }),
     ).toThrowError(/TOOL_NAME_INVALID|invalid/i);
   });

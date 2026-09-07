@@ -4,7 +4,7 @@ import { NextWebMCPError, defineTools, tool } from "../src/index";
 import { buildManifest, createManifestHandler, type ManifestRoutes } from "../src/manifest";
 import type { ToolDef } from "../src/types";
 
-const noop = () => async () => "ok";
+const noop = async () => "ok";
 
 const rootTools = defineTools({
   search: tool({
