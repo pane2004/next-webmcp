@@ -11,14 +11,14 @@ Peers: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4`. Node 22+.
 
 ## Entry points
 
-| Import                  | Runs in         | Contents                                                                                                                |
-| ----------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `next-web-mcp`          | client + server | `tool`, `defineTools`, `navigationTool`, `unwrap`, `ModelContext`, `ToolConfirmations`, hooks, `NextWebMCPError`, types |
-| `next-web-mcp/server`   | server          | `toolAction` — validates a server action's input and output, returns `{ ok, data \| error }`; `ToolActionResult`        |
-| `next-web-mcp/form`     | client          | `Form` — `next/form` with the WebMCP attributes and `respondWith`; ships the JSX typings                                |
-| `next-web-mcp/manifest` | server / Node   | `createManifestHandler`, `buildManifest`, manifest types                                                                |
-| `next-web-mcp/devtools` | client, dev     | `WebMCPDevTools`                                                                                                        |
-| `next-web-mcp/internal` | tests           | `__resetForTests`, `registry`                                                                                           |
+| Import                  | Runs in         | Contents                                                                                                         |
+| ----------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `next-web-mcp`          | client + server | `tool`, `defineTools`, `navigationTool`, `unwrap`, `ModelContext`, hooks, `NextWebMCPError`, types               |
+| `next-web-mcp/server`   | server          | `toolAction` — validates a server action's input and output, returns `{ ok, data \| error }`; `ToolActionResult` |
+| `next-web-mcp/form`     | client          | `Form` — `next/form` with the WebMCP attributes and `respondWith`; ships the JSX typings                         |
+| `next-web-mcp/manifest` | server / Node   | `createManifestHandler`, `buildManifest`, manifest types                                                         |
+| `next-web-mcp/devtools` | client, dev     | `WebMCPDevTools`                                                                                                 |
+| `next-web-mcp/internal` | tests           | `__resetForTests`, `registry`                                                                                    |
 
 `next-web-mcp/form` and `next-web-mcp/devtools` start with `"use client"`. `next-web-mcp/manifest` and
 `next-web-mcp/server` import no React and can be used from route handlers, server actions, server components,
@@ -27,15 +27,15 @@ and scripts.
 `next-web-mcp` itself is a plain barrel; each `"use client"` file keeps its own directive. So `tool`,
 `defineTools`, `navigationTool`, `unwrap`, `NextWebMCPError` and `isModelContextAvailable` are real functions
 on the server (a `tools.ts` that imports them can be shared between a page and the manifest route handler),
-while `ModelContext`, `ToolConfirmations` and the hooks stay client references.
+while `ModelContext` and the hooks stay client references.
 
 ## `next-web-mcp`
 
 ### `tool(def)`
 
-Identity function that infers the input type from the Zod schema so `execute` and `confirm` are typed.
-Validates the name (if given) and converts the schema eagerly, so a bad name or an unsupported Zod version
-fails at module load, not in render.
+Identity function that infers the input type from the Zod schema so `execute` is typed. Validates the name
+(if given) and converts the schema eagerly, so a bad name or an unsupported Zod version fails at module load,
+not in render.
 
 ```ts
 import { z } from "zod";
@@ -55,27 +55,23 @@ export const getTime = tool({
 | Field          | Type                                                                     | Notes                                                       |
 | -------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------- |
 | `name?`        | `string`                                                                 | `[A-Za-z0-9_.-]{1,128}`; defaults to the `defineTools` key. |
-| `title?`       | `string`                                                                 | Used in confirm cards and DevTools.                         |
+| `title?`       | `string`                                                                 | Used in DevTools.                                           |
 | `description`  | `string`                                                                 | Read by the agent. State what it does and what it returns.  |
 | `input`        | `z.ZodTypeAny`                                                           | Converted with `z.toJSONSchema` (Zod 4).                    |
 | `annotations?` | `{ readOnlyHint?, untrustedContentHint?, consequentialHint? }`           | Forwarded to Chrome.                                        |
-| `confirm?`     | `boolean \| (input, ctx) => ConfirmRequest`                              | `true` builds a card from the title and the arguments.      |
 | `execute`      | `(ctx: ToolContext) => (input, { signal }) => Promise<string \| object>` | Objects are `JSON.stringify`ed.                             |
 
-`ToolContext`, passed to `execute(ctx)` and `confirm(input, ctx)`:
+`ToolContext`, passed to `execute(ctx)`:
 
-| Field          | Source                                                                               |
-| -------------- | ------------------------------------------------------------------------------------ |
-| `params`       | `useParams()` (`Record<string, string \| string[] \| undefined>`), as of the call    |
-| `pathname`     | `usePathname()`, as of the call                                                      |
-| `searchParams` | `URLSearchParams` of the current URL, read when the tool runs                        |
-| `router`       | `useRouter()` from `next/navigation`, as of the call                                 |
-| `confirm`      | `(req: ConfirmRequest, signal?) => Promise<boolean>` — the same gate `confirm:` uses |
+| Field          | Source                                                                            |
+| -------------- | --------------------------------------------------------------------------------- |
+| `params`       | `useParams()` (`Record<string, string \| string[] \| undefined>`), as of the call |
+| `pathname`     | `usePathname()`, as of the call                                                   |
+| `searchParams` | `URLSearchParams` of the current URL, read when the tool runs                     |
+| `router`       | `useRouter()` from `next/navigation`, as of the call                              |
 
 The context is built when a call arrives, not when the tool is registered, so a tool registered by a layout
 sees the route the user is on now.
-
-`ConfirmRequest` is `{ title: string; description?: string; details?: Array<{ label: string; value: string }> }`.
 
 ### `defineTools(map)`
 
@@ -203,7 +199,7 @@ execute: () => async (input) => {
 };
 ```
 
-### `<ModelContext tools children? confirmations? />`
+### `<ModelContext tools children? />`
 
 Registers `tools` while mounted and unregisters them on unmount. Nest freely, but keep names unique across
 instances. On a collision the registration that lands last wins (dev warning `TOOL_NAME_DUPLICATE`), and
@@ -212,11 +208,10 @@ React runs the inner instance's effects first, so the outer definition wins; an 
 later commit (for example after a client navigation) wins. Without `document.modelContext` it renders its
 children and logs one `console.info`.
 
-| Prop            | Type              | Default | Notes                                                             |
-| --------------- | ----------------- | ------- | ----------------------------------------------------------------- |
-| `tools`         | `ToolDef[]`       | —       | Usually the result of `defineTools`.                              |
-| `children`      | `React.ReactNode` | —       | Rendered unchanged.                                               |
-| `confirmations` | `boolean`         | `true`  | Whether the outermost `<ModelContext>` renders the approval card. |
+| Prop       | Type              | Default | Notes                                |
+| ---------- | ----------------- | ------- | ------------------------------------ |
+| `tools`    | `ToolDef[]`       | —       | Usually the result of `defineTools`. |
+| `children` | `React.ReactNode` | —       | Rendered unchanged.                  |
 
 ```tsx
 "use client";
@@ -228,15 +223,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 ```
 
-The **outermost** `<ModelContext>` in the tree renders `<ToolConfirmations />` next to its children; nested
-instances detect the outer one through a React context and render nothing extra. Pass
-`confirmations={false}` on the outermost instance to mount `<ToolConfirmations />` yourself (for example
-inside a portal or a specific stacking context).
-
 #### Registration is keyed by tool identity
 
 A tool's identity is its `name`, `title`, `description`, the JSON Schema of `input`, and `annotations` — the
-fields Chrome sees. `confirm` and `execute` are not part of it. `<ModelContext>` keeps one `AbortController`
+fields Chrome sees. `execute` is not part of it. `<ModelContext>` keeps one `AbortController`
 per registered tool and diffs the `tools` array by name whenever it changes:
 
 | Change                                                   | Effect                                                                 |
@@ -268,35 +258,10 @@ Execution pipeline per call:
 1. `await def.input.safeParseAsync(raw)` — async refinements work here too, so one schema can serve the tool
    and its `toolAction`; on failure the agent gets
    `Invalid input for <name>: <path>: <message>; … Fix the arguments and call again.`
-2. `confirm` — if no confirmations renderer is mounted, the call fails at once with `CONFIRM_NO_RENDERER`
-   (see [Error codes](#error-codes)). Otherwise `false`, a 60 s timeout, or an aborted signal returns
-   `User declined <name>.`
-3. `await def.execute(ctx)(parsed, { signal })` — the latest definition, the current route context, and the
+2. `await def.execute(ctx)(parsed, { signal })` — the latest definition, the current route context, and the
    tool's own signal merged with the per-call one; strings pass through, objects are stringified.
-4. Thrown errors become `<name> failed: <message>. Check the page state and try again.` No stack traces.
-5. The call is appended to the 200-entry ring buffer behind `useToolCalls()`.
-
-### `<ToolConfirmations />`
-
-Renders the pending confirm card: fixed position, `role="dialog"`, `aria-live="polite"`, Enter approves,
-Escape denies. `<ModelContext>` mounts it for you; use it directly only with `confirmations={false}`.
-
-```tsx
-"use client";
-import { ModelContext, ToolConfirmations } from "next-web-mcp";
-import { tools } from "./tools";
-
-export function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <ModelContext tools={tools} confirmations={false}>
-      {children}
-      <div id="agent-ui">
-        <ToolConfirmations />
-      </div>
-    </ModelContext>
-  );
-}
-```
+3. Thrown errors become `<name> failed: <message>. Check the page state and try again.` No stack traces.
+4. The call is appended to the 200-entry ring buffer behind `useToolCalls()`.
 
 ### `useToolCalls()`
 
@@ -382,17 +347,15 @@ try {
 
 ### Error codes
 
-| `code`                      | Meaning                                                                                                                                                                                                                                                                                                                                                                            |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TOOL_NAME_INVALID`         | Name outside `[A-Za-z0-9_.-]{1,128}`, a `ToolDef` without a name reached `buildManifest`, or `navigationTool` was given no routes.                                                                                                                                                                                                                                                 |
-| `TOOL_NAME_DUPLICATE`       | Same name registered by two mounted contexts (dev warning; later wins).                                                                                                                                                                                                                                                                                                            |
-| `MODEL_CONTEXT_UNAVAILABLE` | `document.modelContext` missing. One `console.info`; registration no-ops.                                                                                                                                                                                                                                                                                                          |
-| `CONFIRM_TIMEOUT`           | No decision within 60 s; the agent receives `User declined <name>.`.                                                                                                                                                                                                                                                                                                               |
-| `CONFIRM_NO_RENDERER`       | A tool with `confirm` ran while nothing was subscribed to render the card. Rejected immediately; the agent receives `<name> failed: [next-web-mcp] Tool "<name>" needs approval but no <ToolConfirmations/> is mounted. Keep the default confirmations on <ModelContext>, or mount <ToolConfirmations/> yourself. Check the page state and try again.` Warned once in development. |
+| `code`                      | Meaning                                                                                                                            |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `TOOL_NAME_INVALID`         | Name outside `[A-Za-z0-9_.-]{1,128}`, a `ToolDef` without a name reached `buildManifest`, or `navigationTool` was given no routes. |
+| `TOOL_NAME_DUPLICATE`       | Same name registered by two mounted contexts (dev warning; later wins).                                                            |
+| `MODEL_CONTEXT_UNAVAILABLE` | `document.modelContext` missing. One `console.info`; registration no-ops.                                                          |
 
 ### Types
 
-`ToolDef`, `ToolContext`, `ToolAnnotations`, `ConfirmRequest`, `ToolExecuteOptions`, `ToolCallRecord`,
+`ToolDef`, `ToolContext`, `ToolAnnotations`, `ToolExecuteOptions`, `ToolCallRecord`,
 `RegisteredToolInfo`, `ModelContextProps`, `NavigationRoute`, `ToolActionResult`, `NextWebMCPErrorCode`,
 `AppRouterInstance`, `AnyZodSchema`.
 
@@ -654,7 +617,7 @@ the store. Not covered by semver.
 Those hooks wrap `registerTool` well. next-web-mcp is specific to Next.js: route `params`, `pathname`,
 `searchParams` and `router` arrive in `ctx`; `execute` is meant to call server actions so the tool runs in
 the user's session; `next/form` gets a declarative wrapper with `respondWith` and typed attributes;
-`confirm` renders an approval card; the DevTools panel groups tools by route; and the manifest handler is
+the DevTools panel groups tools by route; and the manifest handler is
 built from the same tool definitions.
 
 **Do my tools re-register when I navigate or re-render?**
@@ -676,11 +639,6 @@ Yes — `<ModelContext>` logs one `console.info` and does nothing. Your UI is un
 **Can I use an older Zod?**
 No. The peer range is `zod@^4` because JSON Schema conversion needs `z.toJSONSchema`; without it `tool()` and
 `defineTools()` fail when the tool is defined, so the problem surfaces at module load, not in render.
-
-**Why did my confirm tool fail with `CONFIRM_NO_RENDERER`?**
-Something set `confirmations={false}` on the outermost `<ModelContext>` without mounting
-`<ToolConfirmations />`, or the tool ran from a tree with no `<ModelContext>` at all. Mount the card, or
-remove the override.
 
 **What about the Pages Router or cross-origin iframes?**
 Not yet; see the roadmap in the README.

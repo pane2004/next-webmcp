@@ -17,7 +17,6 @@ const rootTools = defineTools({
     title: "Start checkout",
     description: "Hand the cart to checkout",
     input: z.object({}),
-    confirm: true,
     execute: noop,
   }),
 });
@@ -77,7 +76,6 @@ describe("buildManifest()", () => {
     for (const route of manifest.routes) {
       for (const entry of route.tools) {
         expect(entry).not.toHaveProperty("execute");
-        expect(entry).not.toHaveProperty("confirm");
         expect(entry).not.toHaveProperty("input");
       }
     }

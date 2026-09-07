@@ -176,30 +176,8 @@ export function createRootTools(cartApi: CartApi): ToolDef[] {
 
     start_checkout: tool({
       description:
-        "Hand the current cart to checkout and open the checkout page. Asks the shopper to approve first. Requires at least one item in the cart.",
+        "Hand the current cart to checkout and open the checkout page. Requires at least one item in the cart.",
       input: z.object({}),
-      confirm: () => {
-        const { cart } = cartApi;
-        const lines = cart?.lines ?? [];
-        return {
-          title: "Start checkout",
-          description: "Hands the current cart to checkout.",
-          details: [
-            ...lines.map((line) => ({
-              label: cartLineLabel(line),
-              value: `${line.quantity} × ${formatAmount(
-                Number(line.cost.totalAmount.amount) / line.quantity,
-              )} ${line.cost.totalAmount.currencyCode}`,
-            })),
-            {
-              label: "Total",
-              value: cart
-                ? `${formatAmount(cart.cost.totalAmount.amount)} ${cart.cost.totalAmount.currencyCode}`
-                : "0.00",
-            },
-          ],
-        };
-      },
       execute: (ctx) => async () => {
         const { cart } = cartApi;
         if (!cart || cart.lines.length === 0) {

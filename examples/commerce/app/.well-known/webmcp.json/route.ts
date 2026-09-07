@@ -39,7 +39,7 @@ export const GET = createManifestHandler(async () => {
     getCollections(),
   ]);
   // The manifest only needs each tool's name, description and input schema:
-  // `execute` and `confirm` never run here, so a stub cart api and any product will do.
+  // `execute` never runs here, so a stub cart api and any product will do.
   return {
     "/": [...createRootTools(cartApiStub), newsletterFormTool],
     ...(sample ? { "/product/[handle]": createProductTools(sample, cartApiStub) } : {}),

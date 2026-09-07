@@ -76,11 +76,10 @@ Never run `git commit` or `git push` on behalf of a user unless asked. Never del
    Keep the schema in a plain module both files import (a `"use server"` file exports only functions). The
    action is the tool body.
 3. Add the tool to that segment's `tools.ts` with `defineTools`/`tool`: the shared Zod `input`, a description
-   that says what it does and returns, `annotations.readOnlyHint` for reads, `confirm` for anything
-   consequential, and `unwrap(await action(input))` in `execute`. For moving between pages add one
+   that says what it does and returns, `annotations.readOnlyHint` for reads, and
+   `unwrap(await action(input))` in `execute`. For moving between pages add one
    `navigationTool({ routes })` at the root instead of a per-page navigation tool.
-4. Mount it: a `"use client"` wrapper renders `<ModelContext tools={...}>` around the segment's children. The
-   outermost `<ModelContext>` renders the approval card; do not add a second `<ToolConfirmations />`. Tools
+4. Mount it: a `"use client"` wrapper renders `<ModelContext tools={...}>` around the segment's children. Tools
    built from props (`createProductTools(product)`) go through `useMemo`; a new array or a new closure with
    the same identity is diffed, not re-registered.
 5. Add the route's tools to the manifest handler in `app/.well-known/webmcp.json/route.ts`

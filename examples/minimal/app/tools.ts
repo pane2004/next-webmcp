@@ -17,12 +17,8 @@ export const tools = defineTools({
 
   add_todo: tool({
     title: "Add todo",
-    description: "Add a todo item to the list on this page. Asks the user to approve first.",
+    description: "Add a todo item to the list on this page.",
     input: todoInput,
-    confirm: (input) => ({
-      title: "Add todo",
-      description: `Add "${input.text}" to your list?`,
-    }),
     execute: (ctx) => async (input) => {
       // The action validates again on the server; unwrap() throws its sentence if it failed.
       const todo = unwrap(await addTodo(input));

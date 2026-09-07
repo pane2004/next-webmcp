@@ -6,9 +6,7 @@
 export type NextWebMCPErrorCode =
   | "TOOL_NAME_DUPLICATE"
   | "TOOL_NAME_INVALID"
-  | "MODEL_CONTEXT_UNAVAILABLE"
-  | "CONFIRM_TIMEOUT"
-  | "CONFIRM_NO_RENDERER";
+  | "MODEL_CONTEXT_UNAVAILABLE";
 
 /**
  * Error thrown (or logged) by next-web-mcp. Every instance carries a stable `code`

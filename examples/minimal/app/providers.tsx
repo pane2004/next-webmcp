@@ -7,7 +7,6 @@ import { tools } from "./tools";
 /**
  * Tool definitions contain Zod schemas and functions, which cannot be passed from a server component
  * to a client component as props. Import them here, inside a client module, and mount <ModelContext>.
- * The approval card (<ToolConfirmations/>) is rendered by <ModelContext> itself.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   return (

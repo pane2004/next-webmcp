@@ -15,18 +15,6 @@ describe("tool()", () => {
       },
     });
     expect(def.name).toBe("add");
-    expectTypeOf(def.confirm).toEqualTypeOf<
-      | boolean
-      | ((
-          input: { a: number; b?: number | undefined },
-          ctx: ToolContext,
-        ) => {
-          title: string;
-          description?: string;
-          details?: Array<{ label: string; value: string }>;
-        })
-      | undefined
-    >();
     const list: ToolDef[] = [def];
     expect(list).toHaveLength(1);
   });

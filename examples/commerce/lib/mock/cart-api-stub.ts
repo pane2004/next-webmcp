@@ -16,7 +16,7 @@ const emptyCart: Cart = {
 /**
  * Stand-in for `useCart()` where no React tree exists (the manifest route handler).
  * The manifest only needs each tool's name, description and input schema; `execute`
- * and `confirm` never run there, so the cart stays empty and the mutators do nothing.
+ * never runs there, so the cart stays empty and the mutators do nothing.
  *
  * @example
  * createRootTools(cartApiStub); // feeds buildManifest / createManifestHandler

@@ -1,50 +1,20 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
-import { ToolConfirmations } from "./confirmations";
 import { NextWebMCPError, errorMessage, isDev, warnOnce } from "./errors";
 import { getModelContext } from "./native";
 import { nextId, registry } from "./registry";
 import { formatZodIssues, toolInputToJsonSchema } from "./schema";
 import { TOOL_NAME_PATTERN } from "./tool";
-import type { AppRouterInstance, ConfirmRequest, ToolContext, ToolDef } from "./types";
+import type { AppRouterInstance, ToolContext, ToolDef } from "./types";
 
 /** Props for {@link ModelContext}. */
 export type ModelContextProps = {
   /** Tools to expose while this component is mounted. */
   tools: ToolDef[];
-  /**
-   * Render the approval card (`<ToolConfirmations/>`) after `children`. Only the outermost
-   * `<ModelContext>` renders it; nested ones never do. Pass `false` to mount
-   * `<ToolConfirmations/>` yourself. Defaults to `true`.
-   */
-  confirmations?: boolean;
   children?: ReactNode;
 };
-
-/** `true` anywhere below a `<ModelContext>`, so nested instances skip the confirmation card. */
-const ModelContextNesting = createContext(false);
-
-function toDisplayValue(value: unknown): string {
-  if (typeof value === "string") return value;
-  try {
-    return JSON.stringify(value) ?? String(value);
-  } catch {
-    return String(value);
-  }
-}
-
-function defaultConfirmRequest(def: ToolDef, name: string, input: unknown): ConfirmRequest {
-  const details =
-    input !== null && typeof input === "object" && !Array.isArray(input)
-      ? Object.entries(input as Record<string, unknown>).map(([label, value]) => ({
-          label,
-          value: toDisplayValue(value),
-        }))
-      : [{ label: "input", value: toDisplayValue(input) }];
-  return { title: def.title ?? name, description: def.description, details };
-}
 
 type RunOptions = {
   def: ToolDef;
@@ -55,7 +25,7 @@ type RunOptions = {
   ctx: ToolContext;
 };
 
-/** Runs one tool call: validate → confirm → execute → log. */
+/** Runs one tool call: validate → execute → log. */
 async function runTool({ def, name, route, raw, signal, ctx }: RunOptions): Promise<string> {
   const startedAt = Date.now();
   let ok = true;
@@ -67,27 +37,11 @@ async function runTool({ def, name, route, raw, signal, ctx }: RunOptions): Prom
       ok = false;
       output = `Invalid input for ${name}: ${formatZodIssues(parsed.error.issues)}. Fix the arguments and call again.`;
     } else {
-      let approved = true;
-      if (def.confirm) {
-        const request =
-          typeof def.confirm === "function"
-            ? def.confirm(parsed.data, ctx)
-            : defaultConfirmRequest(def, name, parsed.data);
-        approved = await ctx.confirm(request, signal);
-      }
-      if (!approved) {
-        ok = false;
-        output = `User declined ${name}.`;
-      } else {
-        const result = await def.execute(ctx)(parsed.data, { signal });
-        output = typeof result === "string" ? result : (JSON.stringify(result) ?? String(result));
-      }
+      const result = await def.execute(ctx)(parsed.data, { signal });
+      output = typeof result === "string" ? result : (JSON.stringify(result) ?? String(result));
     }
   } catch (err) {
     ok = false;
-    if (err instanceof NextWebMCPError && err.code === "CONFIRM_NO_RENDERER") {
-      warnOnce(`CONFIRM_NO_RENDERER:${name}`, err.message);
-    }
     const message = errorMessage(err).replace(/\.$/, "");
     output = `${name} failed: ${message}. Check the page state and try again.`;
   }
@@ -106,7 +60,7 @@ async function runTool({ def, name, route, raw, signal, ctx }: RunOptions): Prom
 
 /**
  * What a native `execute` call reads at call time (never at registration time), so a tool
- * registered once keeps seeing the current route and the current `execute`/`confirm` closures.
+ * registered once keeps seeing the current route and the current `execute` closure.
  */
 type Latest = {
   /** First definition per name in the current `tools` prop. */
@@ -130,7 +84,7 @@ const EMPTY_DEFS: ReadonlyMap<string, ToolDef> = new Map();
 
 /**
  * Identity of a tool as the browser sees it: everything `registerTool` receives except `execute`.
- * Two definitions with equal keys share one registration; `execute` and `confirm` are looked up
+ * Two definitions with equal keys share one registration; `execute` is looked up
  * from the latest definition on every call, so a new factory result (say, one closing over a
  * different product) never re-registers.
  */
@@ -162,10 +116,8 @@ function release(registration: Registration): void {
  * Each tool is registered by a stable key (`name`, `title`, `description`, JSON `inputSchema`,
  * `annotations`) with its own `AbortController`: a new `tools` array with the same keys is a
  * no-op, a tool whose key changed is re-registered on its own, tools that disappear are
- * aborted, and unmount aborts everything. `execute`, `confirm`, `pathname`, `params` and
- * `router` are read from the latest render on every call, so navigation never re-registers.
- * Renders its children plus, for the outermost instance only, the approval card
- * (`<ToolConfirmations/>`); pass `confirmations={false}` to mount that yourself.
+ * aborted, and unmount aborts everything. `execute`, `pathname`, `params` and `router` are read
+ * from the latest render on every call, so navigation never re-registers. Renders its children.
  * Safe when WebMCP is unavailable (logs once, no-op).
  *
  * @example
@@ -178,12 +130,7 @@ function release(registration: Registration): void {
  * ```
  * @see https://github.com/pane2004/next-webmcp#modelcontext
  */
-export function ModelContext({
-  tools,
-  confirmations = true,
-  children,
-}: ModelContextProps): React.JSX.Element {
-  const nested = useContext(ModelContextNesting);
+export function ModelContext({ tools, children }: ModelContextProps): React.JSX.Element {
   const params = useParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -282,12 +229,6 @@ export function ModelContext({
               typeof window === "undefined" ? "" : window.location.search,
             ),
             router: current.router,
-            confirm: (request, confirmSignal) =>
-              registry.requestConfirm(
-                name,
-                request,
-                confirmSignal ? AbortSignal.any([confirmSignal, signal]) : signal,
-              ),
           };
           return runTool({
             def: current.defsByName.get(name) ?? def,
@@ -353,10 +294,5 @@ export function ModelContext({
     };
   }, []);
 
-  return (
-    <ModelContextNesting.Provider value={true}>
-      {children}
-      {!nested && confirmations ? <ToolConfirmations /> : null}
-    </ModelContextNesting.Provider>
-  );
+  return <>{children}</>;
 }

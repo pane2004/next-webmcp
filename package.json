@@ -1,7 +1,7 @@
 {
   "name": "next-web-mcp",
   "version": "0.1.0",
-  "description": "Route-scoped WebMCP tools for the Next.js App Router: expose server actions as tools agents can call, with inline human approval and DevTools.",
+  "description": "Route-scoped WebMCP tools for the Next.js App Router: expose server actions as tools agents can call, with route scoping, server-side validation and DevTools.",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,

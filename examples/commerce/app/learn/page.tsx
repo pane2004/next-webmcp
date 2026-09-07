@@ -31,11 +31,10 @@ export default function LearnPage() {
             fills in and submits by itself.
           </p>
           <p>
-            Every tool call updates the page, so the shopper can confirm what the agent did: adding
-            an item opens the cart, refining results changes the URL, and{" "}
-            <code>start_checkout</code> shows an approval card before anything happens. The panel in
-            the bottom-right corner lists the registered tools, runs them with sample arguments, and
-            logs each call.
+            Every tool call updates the page, so the shopper can see what the agent did: adding an
+            item opens the cart, refining results changes the URL, and <code>start_checkout</code>{" "}
+            opens the checkout page. The panel in the bottom-right corner lists the registered
+            tools, runs them with sample arguments, and logs each call.
           </p>
         </div>
 

@@ -48,14 +48,13 @@ function abortedSignals(): AbortSignal[] {
 }
 
 describe("<ModelContext>", () => {
-  it("renders only its children while no confirmation is pending", () => {
+  it("renders only its children", () => {
     const { container } = render(
       <ModelContext tools={[echo]}>
         <p>page</p>
       </ModelContext>,
     );
     expect(container.innerHTML).toBe("<p>page</p>");
-    expect(registry.confirmationRendererCount()).toBe(1);
   });
 
   it("registers on mount and aborts (unregisters) every tool on unmount", () => {
@@ -298,30 +297,6 @@ describe("<ModelContext>", () => {
       expect(fake.registerCalls).toBe(1);
       expect(abortedSignals()).toHaveLength(0);
       await expect(fake.executeTool("buy", "{}")).resolves.toBe("bought hat");
-    });
-
-    it("uses the newest confirm() closure as well", async () => {
-      const makeTools = (product: string) => [
-        tool({
-          name: "buy",
-          description: "Buy the product on this page",
-          input: z.object({}),
-          confirm: () => ({ title: `Buy ${product}` }),
-          execute: () => async () => `bought ${product}`,
-        }),
-      ];
-      const { rerender } = render(<ModelContext tools={makeTools("shoe")} />);
-      rerender(<ModelContext tools={makeTools("hat")} />);
-      expect(fake.registerCalls).toBe(1);
-      let promise!: Promise<unknown>;
-      await act(async () => {
-        promise = fake.executeTool("buy", "{}");
-      });
-      expect(screen.getByRole("dialog").textContent).toContain("Buy hat");
-      await act(async () => {
-        fireEvent.click(screen.getByRole("button", { name: "Approve" }));
-      });
-      await expect(promise).resolves.toBe("bought hat");
     });
 
     it("updates DevTools route attribution on navigation without re-registering", () => {

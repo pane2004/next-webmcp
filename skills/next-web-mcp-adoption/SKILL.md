@@ -32,7 +32,6 @@ Chrome's WebMCP guidance distinguishes two APIs. Decide per candidate:
 | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | An existing `<form>` already does the job with a submit (newsletter, contact, filter) | Declarative: `next-web-mcp/form` `Form` with `toolname` + `tooldescription` |
 | Needs route context, structured JSON input, a computed result, or reads data          | Imperative: `tool()` inside `defineTools` mounted with `<ModelContext>`     |
-| Consequential                                                                         | Imperative with `confirm`                                                   |
 | Pure read                                                                             | Imperative with `annotations.readOnlyHint: true`                            |
 | Returns third-party content                                                           | Add `annotations.untrustedContentHint: true`                                |
 
@@ -83,7 +82,6 @@ export const productTools = defineTools({
     description:
       "Add a variant of the product on this page to the cart. Returns the new cart size.",
     input: addToCartInput,
-    confirm: true,
     execute: (ctx) => async (input) => {
       const cart = unwrap(await addItem(input)); // throws the action's sentence on failure
       ctx.router.refresh();
@@ -101,7 +99,8 @@ Checklist per tool:
 
 - `description` states what it does and what it returns, in one or two sentences.
 - Every schema field has `.describe()`.
-- Read tools: `readOnlyHint: true`. Consequential tools: `confirm: true` or a `confirm` function.
+- Read tools: `readOnlyHint: true`. Consequential tools: authorize inside the server action, which runs
+  with the user's session.
 - Tools that navigate return their string first, then `setTimeout(() => ctx.router.push(url), 0)`
   (`navigationTool` does this for you).
 - Server actions behind tools are `toolAction(schema, handler)`; `execute` reads them with `unwrap()`. For
@@ -122,9 +121,7 @@ export function ProductTools({ children }: { children: React.ReactNode }) {
 }
 ```
 
-Wrap the segment's children in `layout.tsx` or `page.tsx` with it. The outermost `<ModelContext>` (usually
-the root layout's wrapper) renders the approval card by itself; do not add `<ToolConfirmations />` unless you
-pass `confirmations={false}` and want to place the card yourself. In that root wrapper also render
+Wrap the segment's children in `layout.tsx` or `page.tsx` with it. In the root layout's wrapper also render
 `<WebMCPDevTools />` from `next-web-mcp/devtools` (it renders `null` in production).
 
 For declarative forms, replace `import Form from "next/form"` with `import Form from "next-web-mcp/form"` and
@@ -155,11 +152,10 @@ to `public/`.
 
 1. Start the dev server, open the app in Chrome 149+ with `chrome://flags/#enable-webmcp-testing` enabled.
 2. Open the DevTools panel (bottom corner) or the Model Context Tool Inspector extension.
-3. Confirm: the root tools are listed on `/`; segment tools appear when you navigate into the segment and
+3. Check: the root tools are listed on `/`; segment tools appear when you navigate into the segment and
    disappear when you leave; each tool's JSON Schema matches the Zod schema.
 4. In the Run tab call each tool with valid and invalid JSON. Invalid input must return
-   `Invalid input for <name>: …`; a consequential tool must show the approval card; Escape must return
-   `User declined <name>.` A `CONFIRM_NO_RENDERER` failure means the card is not mounted — see Step 4.
+   `Invalid input for <name>: …`.
 5. `curl http://localhost:3000/.well-known/webmcp.json` returns `{ "version": 1, "routes": [...] }` with every
    tool you defined.
 6. Check the console: no `[next-web-mcp]` warnings other than an expected `MODEL_CONTEXT_UNAVAILABLE` info in
@@ -168,6 +164,6 @@ to `public/`.
 
 ## Step 7 — Report
 
-Summarize: routes touched, tools added (name, kind, confirm?), files created, and anything you could not
+Summarize: routes touched, tools added (name, kind), files created, and anything you could not
 verify (for example if no WebMCP-capable browser was available). Do not claim tools work in Chrome unless you
 observed them in the panel.

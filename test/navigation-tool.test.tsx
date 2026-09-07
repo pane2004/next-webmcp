@@ -66,7 +66,6 @@ function directCtx(): ToolContext {
     pathname: "/",
     searchParams: new URLSearchParams(),
     router: nav.router as unknown as ToolContext["router"],
-    confirm: async () => true,
   };
 }
 

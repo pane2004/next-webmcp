@@ -4,7 +4,7 @@ The smallest useful next-web-mcp app: a todo list with three tools and a manifes
 
 - `get_time` — read-only, returns an ISO-8601 string.
 - `add_todo` — runs the `addTodo` server action (wrapped in `toolAction` from `next-web-mcp/server`, so
-  the server validates the input again) after the user approves a confirm card.
+  the server validates the input again).
 - `navigate_to` — built with `navigationTool`; opens `/` or `/todos/[id]`.
 - `GET /.well-known/webmcp.json` — the manifest, built from the same `tools` array.
 
@@ -22,7 +22,7 @@ app/tools.ts                          tool definitions (defineTools + tool + nav
 app/actions.ts                        "use server" actions used by the tools and the form (addTodo = toolAction(...))
 app/todos.ts                          in-memory store and the todoInput schema shared by the tool and the action
 app/todos/[id]/page.tsx               one todo; the dynamic route navigate_to can open
-app/providers.tsx                     client wrapper mounting <ModelContext> (renders the approval card) and <WebMCPDevTools>
+app/providers.tsx                     client wrapper mounting <ModelContext> and <WebMCPDevTools>
 app/layout.tsx                        root layout
 app/page.tsx                          server component rendering the list
 app/.well-known/webmcp.json/route.ts  createManifestHandler({ "/": tools })

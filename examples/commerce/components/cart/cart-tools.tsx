@@ -10,8 +10,8 @@ import { useCart } from "./cart-context";
  * Registers the root WebMCP tools, rebuilt from the live cart. `useCart()` returns
  * a new value whenever the cart changes; the rebuilt tools keep their identity, so
  * `<ModelContext>` swaps in the fresh closures without re-registering. Must render
- * inside `<CartProvider>`. `<ModelContext>` renders the approval card itself; this
- * adds the DevTools panel (forced on so the demo shows it in production too).
+ * inside `<CartProvider>`. Also mounts the DevTools panel (forced on so the demo shows
+ * it in production too).
  *
  * @example
  * <CartProvider cartPromise={cart}>

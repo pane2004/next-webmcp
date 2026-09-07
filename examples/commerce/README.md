@@ -4,14 +4,14 @@ The next-web-mcp demo storefront, deployed at **https://next-webmcp-commerce.ver
 [vercel/commerce](https://github.com/vercel/commerce) (see [LICENSE.vercel-commerce.md](./LICENSE.vercel-commerce.md))
 with WebMCP tools on every route:
 
-| Route                             | Tools                                                                                                      |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `/` (root layout)                 | `search_products`, `get_cart`, `navigate_to`, `update_quantity`, `remove_item`, `start_checkout` (confirm) |
-| `/product/[handle]`               | `get_product`, `add_to_cart`                                                                               |
-| `/search`, `/search/[collection]` | `refine_results`                                                                                           |
-| footer (all routes)               | `subscribe_newsletter` (declarative `next-web-mcp/form`)                                                   |
-| `/learn`                          | page listing the tools registered right now                                                                |
-| `/.well-known/webmcp.json`        | manifest served by `createManifestHandler`                                                                 |
+| Route                             | Tools                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `/` (root layout)                 | `search_products`, `get_cart`, `navigate_to`, `update_quantity`, `remove_item`, `start_checkout` |
+| `/product/[handle]`               | `get_product`, `add_to_cart`                                                                     |
+| `/search`, `/search/[collection]` | `refine_results`                                                                                 |
+| footer (all routes)               | `subscribe_newsletter` (declarative `next-web-mcp/form`)                                         |
+| `/learn`                          | page listing the tools registered right now                                                      |
+| `/.well-known/webmcp.json`        | manifest served by `createManifestHandler`                                                       |
 
 Where things live: `app/tools.ts` (root tools), `app/product/[handle]/tools.ts`, `app/search/tools.ts`,
 `components/cart/cart-tools.tsx` (mounts the root `<ModelContext>` and the DevTools panel),

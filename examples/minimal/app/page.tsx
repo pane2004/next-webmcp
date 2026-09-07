@@ -11,9 +11,8 @@ export default async function HomePage() {
       <h1>Todos</h1>
       <p>
         This page exposes three WebMCP tools: <code>get_time</code> (read-only),{" "}
-        <code>add_todo</code> (asks for approval, then runs a server action) and{" "}
-        <code>navigate_to</code> (opens the list or one todo). Open the DevTools panel in the corner
-        to call them, or ask an agent.
+        <code>add_todo</code> (runs a server action) and <code>navigate_to</code> (opens the list or
+        one todo). Open the DevTools panel in the corner to call them, or ask an agent.
       </p>
 
       <form action={addTodoFromForm} style={{ display: "flex", gap: "0.5rem" }}>

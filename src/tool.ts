@@ -31,7 +31,6 @@ export function assertValidToolName(name: string): void {
  *   name: "addToCart",
  *   description: "Add a product to the cart",
  *   input: z.object({ sku: z.string(), qty: z.number().int().min(1) }),
- *   confirm: true,
  *   execute: (ctx) => async ({ sku, qty }) => {
  *     await addToCartAction(sku, qty); // server action
  *     return `Added ${qty} × ${sku}`;

@@ -46,7 +46,7 @@ function toManifestTool(def: ToolDef, route: string): ManifestTool {
 /**
  * Builds the `/.well-known/webmcp.json` document from the same tool definitions
  * `<ModelContext>` registers, so the manifest can never drift from the app.
- * Each tool's Zod `input` becomes JSON Schema; `execute` and `confirm` are left out.
+ * Each tool's Zod `input` becomes JSON Schema; `execute` is left out.
  *
  * @example
  * ```ts
