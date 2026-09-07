@@ -134,68 +134,64 @@ Peer dependencies: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4` (JSO
 
 ### Route-scoped tools
 
-`<ModelContext tools={...}>` is a client component. On mount it feature-detects `document.modelContext`,
-converts each Zod schema with `z.toJSONSchema`, and calls `registerTool(tool, { signal })` once per tool, each
-with its own `AbortController`. Unmounting aborts the signals, which is how WebMCP unregisters tools.
+`<ModelContext tools={...}>` is a client component. On mount it converts each Zod schema to JSON Schema
+and registers each tool with `document.modelContext`. Each tool gets its own `AbortController`. On unmount
+the component aborts the signals, and the browser unregisters the tools.
 
-Registration is keyed by tool identity: `name`, `title`, `description`, the JSON Schema of `input`, and
-`annotations` — the fields Chrome sees. Re-renders, new `tools` array identities, route changes, and factory
-results with the same identity never re-register anything. Only a tool that appears, disappears, or changes
-shape triggers a `registerTool` or an abort, and only for that tool. `execute` always runs the latest
-definition with the route context (`pathname`, `params`, `searchParams`, `router`) read when the call
-arrives, so a layout-level tool keeps working across navigation with no gap, and the DevTools route grouping
-follows the URL.
+A tool's identity is its `name`, `title`, `description`, input schema and `annotations`. A re-render, a new
+`tools` array, or a route change does not register anything again. Only a tool that appears, disappears or
+changes identity causes a registration or an abort. Each call reads the newest `execute` and the current
+route context (`pathname`, `params`, `searchParams`, `router`), so a layout-level tool keeps working across
+navigation.
 
-Mount one `<ModelContext>` per segment that owns tools: the root layout can expose `get_cart`, and
-`product/[handle]/page.tsx` can add `add_to_cart` that reads `ctx.params.handle`. Nested contexts add up, so
-keep names unique across them. If two contexts register the same name, the registration that lands last wins
-and a `TOOL_NAME_DUPLICATE` warning is logged once in development. Which one lands last depends on mount
-order: when both mount in the same commit React runs the inner instance's effects first, so the outer
-definition wins; an inner instance mounted in a later commit (after a client navigation) wins. Without
-`document.modelContext` (SSR, other browsers) the component is a no-op that logs one `console.info`.
+Mount one `<ModelContext>` in each segment that owns tools. The root layout can expose `get_cart`, and
+`product/[handle]/page.tsx` can add `add_to_cart`. Nested contexts add up, so keep names unique. If two
+contexts register the same name, the last registration wins and development logs `TOOL_NAME_DUPLICATE` once.
+The [API reference](./docs/api.md#modelcontext-tools-children-) explains which one lands last. Without
+`document.modelContext` (SSR, other browsers) the component does nothing and logs one `console.info`.
 
 ### Server actions as `execute`
 
 `execute` is curried: `execute: (ctx) => async (input, { signal }) => ...`. The outer function receives the
-route context (`params`, `pathname`, `searchParams`, `router`) as of the call; the inner function
-receives validated input. Call server actions from it directly — they run with the user's cookies and
-session, so an agent can only do what the signed-in user can do.
+route context. The inner function receives validated input. Call server actions from it directly. They run
+with the user's cookies and session, so an agent can do only what the signed-in user can do.
 
-Every call goes through the same pipeline: `safeParseAsync` the input (invalid input returns
-`Invalid input for <name>: … Fix the arguments and call again.`), run the action, stringify object results,
-and turn thrown errors into `<name> failed: <message>. Check the page state and try again.` — never a stack
-trace. Each call is appended to a 200-entry log behind `useToolCalls()`.
+Every call follows the same steps:
 
-Tools that navigate should return their string first and call `ctx.router.push()` afterwards (for example in
-`setTimeout(..., 0)`): Chrome's `executeTool` resolves to `null` if a tool navigates before it returns.
-`navigationTool({ routes })` does this for you: it builds a `navigate_to` tool whose `route` argument is an
-enum of the App Router patterns you list (`"/product/[handle]"`), fills the `[segment]`s from `params` and
-appends `query`, every value URL-encoded, returns `Navigating to <href>.` and pushes afterwards. The agent
+1. Parse the input with the Zod schema. Invalid input returns a sentence that asks the agent to fix the
+   arguments.
+2. Run `execute`. An object result becomes JSON.
+3. A thrown error becomes `<name> failed: <message>. Check the page state and try again.` The agent never
+   sees a stack trace.
+4. The call is added to the log behind `useToolCalls()`.
+
+A tool that navigates must return its string first and navigate afterwards, for example in
+`setTimeout(..., 0)`. If a tool navigates before it returns, Chrome's `executeTool` resolves to `null`.
+`navigationTool({ routes })` does this for you. It builds a `navigate_to` tool from the App Router patterns
+you list, fills the `[segment]`s from `params`, appends `query`, and URL-encodes every value. The agent
 cannot open a page you did not list.
 
 ### Validate on the server too
 
-`<ModelContext>` checks a tool's arguments in the browser, but the browser is the agent's side of the
-boundary: anything that reaches a server action can be forged. `toolAction(input, handler, options?)` from
-`next-web-mcp/server` wraps the action with the same Zod schema, so the server parses the arguments again
-(defaults and transforms applied), runs the handler, optionally checks the result against `options.output`,
-and always resolves to a plain `ToolActionResult`: `{ ok: true, data }` or `{ ok: false, error }`. It never
-throws — Next.js redacts thrown server-action errors in production, so an agent would only read "an error
-occurred". Invalid input becomes `Invalid input: <path>: <message>; … Fix the arguments and call again.`; a
-thrown handler error is logged with `console.error` and reported as `The action failed on the server. Try
-again.` (or what `options.onError` returns); a result that fails `output` becomes
-`The server returned an unexpected result.` Inside `execute`, `unwrap(result)` returns `data` or throws
-`Error(error)`, which the pipeline above turns into `<name> failed: <error>. Check the page state and try
-again.` — so the agent reads the server's own sentence. Keep the schema in a plain module both files import:
-a `"use server"` file can only export async functions.
+`<ModelContext>` checks a tool's arguments in the browser. The browser is the agent's side of the boundary,
+so a server action must not trust what it receives. `toolAction(input, handler, options?)` from
+`next-web-mcp/server` wraps the action with the same Zod schema. The server parses the arguments again, runs
+the handler, and can check the result against `options.output`.
+
+`toolAction` never throws. It always resolves to `{ ok: true, data }` or `{ ok: false, error }`, because
+Next.js redacts thrown server-action errors in production and an agent would read only "an error occurred".
+Inside `execute`, `unwrap(result)` returns `data` or throws `Error(error)`. The pipeline above turns that
+throw into `<name> failed: <error>`, so the agent reads the server's own sentence.
+
+Keep the schema in a plain module that both files import. A `"use server"` file can export only async
+functions.
 
 ### Declarative forms
 
-`next-web-mcp/form` exports a `Form` that wraps `next/form`, sets `toolname`, `tooldescription` and
-`toolautosubmit`, and answers agent submits by calling the `action` with the form's `FormData` and handing
-the promise to `e.respondWith()`. Human submits are untouched. The package ships the JSX typings for
-`toolname`, `tooldescription`, `toolautosubmit` (on `<form>`) and `toolparamdescription` (on `<input>`,
-`<select>`, `<textarea>`), so no augmentation or cast is needed in your app.
+`next-web-mcp/form` exports a `Form` that wraps `next/form`. It sets the `toolname`, `tooldescription` and
+`toolautosubmit` attributes. When an agent submits the form, `Form` calls the `action` with the form's
+`FormData` and hands the promise to `e.respondWith()`. A human submit works as before. The package ships the
+JSX typings for these attributes and for `toolparamdescription` on `<input>`, `<select>` and `<textarea>`.
 
 ```tsx
 "use client";
@@ -218,8 +214,8 @@ export function NewsletterForm() {
 
 ### Manifest
 
-`next-web-mcp/manifest` turns the same `ToolDef[]` arrays into a JSON document agents can read before
-loading a page. Serve it from a route handler:
+`next-web-mcp/manifest` turns the same `ToolDef[]` arrays into a JSON document that agents can read before
+they load a page. Serve it from a route handler:
 
 ```ts
 // app/.well-known/webmcp.json/route.ts
@@ -229,9 +225,9 @@ import { tools } from "../../tools";
 export const GET = createManifestHandler({ "/": tools });
 ```
 
-Keys are route patterns (`"/product/[handle]"`), values are tool arrays. The handler responds with
-`application/json` and `Cache-Control: public, max-age=300`; pass a function (sync or async) when a route's
-tools depend on data. The entry is server-safe — no React, no `"use client"`.
+Keys are route patterns such as `"/product/[handle]"`. Values are tool arrays. Pass a function, sync or
+async, when a route's tools depend on data. The response is JSON with `Cache-Control: public, max-age=300`.
+The entry is server-safe: no React and no `"use client"`.
 
 ## API
 
