@@ -1,5 +1,5 @@
-import { tool } from "next-web-mcp";
-import { createManifestHandler } from "next-web-mcp/manifest";
+import { tool } from "nextjs-webmcp";
+import { createManifestHandler } from "nextjs-webmcp/manifest";
 import { createProductTools } from "app/product/[handle]/tools";
 import { createSearchTools } from "app/search/tools";
 import { createRootTools } from "app/tools";

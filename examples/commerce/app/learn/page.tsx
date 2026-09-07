@@ -4,7 +4,7 @@ import { ToolList } from "./tool-list";
 
 export const metadata: Metadata = {
   title: "Learn",
-  description: "How this store exposes WebMCP tools to browser agents with next-web-mcp.",
+  description: "How this store exposes WebMCP tools to browser agents with nextjs-webmcp.",
 };
 
 export default function LearnPage() {
@@ -21,7 +21,7 @@ export default function LearnPage() {
             an <code>execute</code> function that returns text the agent can read.
           </p>
           <p>
-            This store uses <code>next-web-mcp</code> to register tools from React components, so
+            This store uses <code>nextjs-webmcp</code> to register tools from React components, so
             they follow the App Router: the root layout provides <code>search_products</code>,{" "}
             <code>get_cart</code>, <code>update_quantity</code>, <code>remove_item</code>,{" "}
             <code>navigate_to</code> and <code>start_checkout</code>; a product page adds{" "}

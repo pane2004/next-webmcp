@@ -24,38 +24,38 @@ const OTHER_ROUTE = "declarative / other";
 
 const panelStyle: CSSProperties = {
   position: "fixed",
-  bottom: "var(--next-web-mcp-offset, 16px)",
-  zIndex: "var(--next-web-mcp-z-index, 2147483000)" as unknown as number,
+  bottom: "var(--nextjs-webmcp-offset, 16px)",
+  zIndex: "var(--nextjs-webmcp-z-index, 2147483000)" as unknown as number,
   width: "min(420px, calc(100vw - 32px))",
   maxHeight: "min(70vh, 560px)",
   display: "flex",
   flexDirection: "column",
   boxSizing: "border-box",
-  borderRadius: "var(--next-web-mcp-radius, 12px)",
-  background: "var(--next-web-mcp-bg, #ffffff)",
-  color: "var(--next-web-mcp-fg, #111111)",
-  border: "1px solid var(--next-web-mcp-border, rgba(0,0,0,0.12))",
-  boxShadow: "var(--next-web-mcp-shadow, 0 8px 24px rgba(0,0,0,0.18))",
-  font: "var(--next-web-mcp-font, 13px/1.4 system-ui, sans-serif)",
+  borderRadius: "var(--nextjs-webmcp-radius, 12px)",
+  background: "var(--nextjs-webmcp-bg, #ffffff)",
+  color: "var(--nextjs-webmcp-fg, #111111)",
+  border: "1px solid var(--nextjs-webmcp-border, rgba(0,0,0,0.12))",
+  boxShadow: "var(--nextjs-webmcp-shadow, 0 8px 24px rgba(0,0,0,0.18))",
+  font: "var(--nextjs-webmcp-font, 13px/1.4 system-ui, sans-serif)",
   overflow: "hidden",
 };
 const toggleStyle: CSSProperties = {
   position: "fixed",
-  bottom: "var(--next-web-mcp-offset, 16px)",
-  zIndex: "var(--next-web-mcp-z-index, 2147483000)" as unknown as number,
+  bottom: "var(--nextjs-webmcp-offset, 16px)",
+  zIndex: "var(--nextjs-webmcp-z-index, 2147483000)" as unknown as number,
   padding: "8px 12px",
   borderRadius: 999,
-  border: "1px solid var(--next-web-mcp-border, rgba(0,0,0,0.2))",
-  background: "var(--next-web-mcp-accent, #1d4ed8)",
-  color: "var(--next-web-mcp-accent-fg, #ffffff)",
-  font: "var(--next-web-mcp-font, 13px/1.4 system-ui, sans-serif)",
+  border: "1px solid var(--nextjs-webmcp-border, rgba(0,0,0,0.2))",
+  background: "var(--nextjs-webmcp-accent, #1d4ed8)",
+  color: "var(--nextjs-webmcp-accent-fg, #ffffff)",
+  font: "var(--nextjs-webmcp-font, 13px/1.4 system-ui, sans-serif)",
   fontWeight: 600,
   cursor: "pointer",
 };
 const smallButton: CSSProperties = {
   padding: "4px 8px",
   borderRadius: 6,
-  border: "1px solid var(--next-web-mcp-border, rgba(0,0,0,0.2))",
+  border: "1px solid var(--nextjs-webmcp-border, rgba(0,0,0,0.2))",
   background: "transparent",
   color: "inherit",
   font: "inherit",
@@ -65,7 +65,7 @@ const pre: CSSProperties = {
   margin: "6px 0 0",
   padding: 8,
   borderRadius: 6,
-  background: "var(--next-web-mcp-muted-bg, rgba(0,0,0,0.05))",
+  background: "var(--nextjs-webmcp-muted-bg, rgba(0,0,0,0.05))",
   fontSize: 11,
   whiteSpace: "pre-wrap",
   wordBreak: "break-word",
@@ -99,7 +99,7 @@ function ToolsTab({ tools }: { tools: RegisteredToolInfo[] }): React.JSX.Element
               key={t.name}
               style={{
                 padding: "6px 0",
-                borderTop: "1px solid var(--next-web-mcp-border, rgba(0,0,0,0.08))",
+                borderTop: "1px solid var(--nextjs-webmcp-border, rgba(0,0,0,0.08))",
               }}
             >
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -202,7 +202,7 @@ function CallsTab(): React.JSX.Element {
           key={c.id}
           style={{
             padding: "6px 0",
-            borderTop: "1px solid var(--next-web-mcp-border, rgba(0,0,0,0.08))",
+            borderTop: "1px solid var(--nextjs-webmcp-border, rgba(0,0,0,0.08))",
           }}
         >
           <div style={{ display: "flex", gap: 6 }}>
@@ -224,7 +224,7 @@ function CallsTab(): React.JSX.Element {
  *
  * @example
  * ```tsx
- * import { WebMCPDevTools } from "next-web-mcp/devtools";
+ * import { WebMCPDevTools } from "nextjs-webmcp/devtools";
  * <body>{children}<WebMCPDevTools /></body>
  * ```
  * @see https://github.com/pane2004/next-webmcp#devtools
@@ -240,8 +240,8 @@ export function WebMCPDevTools({
   if (process.env.NODE_ENV === "production" && !force) return null;
   const side: CSSProperties =
     position === "bottom-left"
-      ? { left: "var(--next-web-mcp-offset, 16px)" }
-      : { right: "var(--next-web-mcp-offset, 16px)" };
+      ? { left: "var(--nextjs-webmcp-offset, 16px)" }
+      : { right: "var(--nextjs-webmcp-offset, 16px)" };
 
   if (!open) {
     return (
@@ -259,7 +259,7 @@ export function WebMCPDevTools({
     <div
       role="region"
       aria-label="WebMCP DevTools"
-      data-next-web-mcp="devtools"
+      data-nextjs-webmcp="devtools"
       style={{ ...panelStyle, ...side }}
     >
       <div
@@ -268,7 +268,7 @@ export function WebMCPDevTools({
           alignItems: "center",
           gap: 4,
           padding: 8,
-          borderBottom: "1px solid var(--next-web-mcp-border, rgba(0,0,0,0.12))",
+          borderBottom: "1px solid var(--nextjs-webmcp-border, rgba(0,0,0,0.12))",
         }}
       >
         <strong style={{ flex: 1 }}>WebMCP</strong>

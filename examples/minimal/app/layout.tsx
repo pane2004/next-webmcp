@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "next-web-mcp minimal example",
+  title: "nextjs-webmcp minimal example",
   description: "Three WebMCP tools, one manifest.",
 };
 

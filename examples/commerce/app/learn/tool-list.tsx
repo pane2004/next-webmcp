@@ -1,6 +1,6 @@
 "use client";
 
-import { useModelContextTools } from "next-web-mcp";
+import { useModelContextTools } from "nextjs-webmcp";
 
 /**
  * Live table of the tools currently registered with `document.modelContext`.

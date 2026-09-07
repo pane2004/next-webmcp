@@ -66,7 +66,7 @@ export const registry = {
     if (owners.has(name)) {
       warnOnce(
         `TOOL_NAME_DUPLICATE:${name}`,
-        `[next-web-mcp] TOOL_NAME_DUPLICATE: tool "${name}" is registered by more than one <ModelContext>. The later registration wins.`,
+        `[nextjs-webmcp] TOOL_NAME_DUPLICATE: tool "${name}" is registered by more than one <ModelContext>. The later registration wins.`,
       );
     }
     const owner = Symbol(name);

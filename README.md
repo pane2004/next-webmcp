@@ -1,6 +1,6 @@
-# next-web-mcp
+# nextjs-webmcp
 
-[![npm](https://img.shields.io/npm/v/next-web-mcp.svg?label=npm)](https://www.npmjs.com/package/next-web-mcp)
+[![npm](https://img.shields.io/npm/v/nextjs-webmcp.svg?label=npm)](https://www.npmjs.com/package/nextjs-webmcp)
 [![CI](https://github.com/pane2004/next-webmcp/actions/workflows/ci.yml/badge.svg)](https://github.com/pane2004/next-webmcp/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
@@ -11,7 +11,7 @@ in the user's own session. No extra server, no OAuth, no second API surface.
 - **Route-scoped** — tools register when a segment mounts and unregister when it unmounts. An agent on
   `/product/shoes` sees `add_to_cart`; an agent on `/` does not.
 - **Server actions as `execute`** — the tool body is the same `"use server"` function your buttons call.
-- **Validated on the server too** — `toolAction()` from `next-web-mcp/server` wraps the action with the
+- **Validated on the server too** — `toolAction()` from `nextjs-webmcp/server` wraps the action with the
   same Zod schema and resolves to `{ ok, data | error }` instead of throwing.
 - **Zod in, JSON Schema out** — `input: z.object(...)` becomes the tool's `inputSchema`.
 - **Navigation from an allowlist** — `navigationTool()` builds a `navigate_to` tool from your route
@@ -37,7 +37,7 @@ export const searchInput = z.object({
 // app/actions.ts
 "use server";
 import { z } from "zod";
-import { toolAction } from "next-web-mcp/server";
+import { toolAction } from "nextjs-webmcp/server";
 import { db } from "@/lib/db";
 import { searchInput } from "./schemas";
 
@@ -51,7 +51,7 @@ export const startCheckout = toolAction(z.object({}), () => db.cart.checkout());
 ```ts
 // app/tools.ts
 import { z } from "zod";
-import { defineTools, navigationTool, tool, unwrap } from "next-web-mcp";
+import { defineTools, navigationTool, tool, unwrap } from "nextjs-webmcp";
 import { searchProducts, startCheckout } from "./actions";
 import { searchInput } from "./schemas";
 
@@ -89,8 +89,8 @@ export const tools = defineTools({
 ```tsx
 // app/providers.tsx
 "use client";
-import { ModelContext } from "next-web-mcp";
-import { WebMCPDevTools } from "next-web-mcp/devtools";
+import { ModelContext } from "nextjs-webmcp";
+import { WebMCPDevTools } from "nextjs-webmcp/devtools";
 import { tools } from "./tools";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -124,7 +124,7 @@ Import `tools` inside a `"use client"` module (as above) and render `<ModelConte
 ## Install
 
 ```sh
-pnpm add next-web-mcp zod
+pnpm add nextjs-webmcp zod
 ```
 
 Peer dependencies: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4` (JSON Schema conversion uses
@@ -175,7 +175,7 @@ cannot open a page you did not list.
 
 `<ModelContext>` checks a tool's arguments in the browser. The browser is the agent's side of the boundary,
 so a server action must not trust what it receives. `toolAction(input, handler, options?)` from
-`next-web-mcp/server` wraps the action with the same Zod schema. The server parses the arguments again, runs
+`nextjs-webmcp/server` wraps the action with the same Zod schema. The server parses the arguments again, runs
 the handler, and can check the result against `options.output`.
 
 `toolAction` never throws. It always resolves to `{ ok: true, data }` or `{ ok: false, error }`, because
@@ -188,14 +188,14 @@ functions.
 
 ### Declarative forms
 
-`next-web-mcp/form` exports a `Form` that wraps `next/form`. It sets the `toolname`, `tooldescription` and
+`nextjs-webmcp/form` exports a `Form` that wraps `next/form`. It sets the `toolname`, `tooldescription` and
 `toolautosubmit` attributes. When an agent submits the form, `Form` calls the `action` with the form's
 `FormData` and hands the promise to `e.respondWith()`. A human submit works as before. The package ships the
 JSX typings for these attributes and for `toolparamdescription` on `<input>`, `<select>` and `<textarea>`.
 
 ```tsx
 "use client";
-import Form from "next-web-mcp/form";
+import Form from "nextjs-webmcp/form";
 import { subscribe } from "./actions"; // "use server"; (formData: FormData) => Promise<string>
 
 export function NewsletterForm() {
@@ -214,12 +214,12 @@ export function NewsletterForm() {
 
 ### Manifest
 
-`next-web-mcp/manifest` turns the same `ToolDef[]` arrays into a JSON document that agents can read before
+`nextjs-webmcp/manifest` turns the same `ToolDef[]` arrays into a JSON document that agents can read before
 they load a page. Serve it from a route handler:
 
 ```ts
 // app/.well-known/webmcp.json/route.ts
-import { createManifestHandler } from "next-web-mcp/manifest";
+import { createManifestHandler } from "nextjs-webmcp/manifest";
 import { tools } from "../../tools";
 
 export const GET = createManifestHandler({ "/": tools });
@@ -233,31 +233,31 @@ The entry is server-safe: no React and no `"use client"`.
 
 Full reference with signatures and examples: **[docs/api.md](./docs/api.md)**.
 
-| Import                  | Export                                 | Purpose                                                                                   |
-| ----------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `next-web-mcp`          | `tool(def)`                            | Identity helper that infers the input type from the Zod schema.                           |
-|                         | `defineTools(map)`                     | Turns `{ name: tool(...) }` into `ToolDef[]`, filling `name` from keys.                   |
-|                         | `<ModelContext>`                       | Registers `tools` for the lifetime of the mount.                                          |
-|                         | `useToolCalls()`                       | Last 200 `ToolCallRecord`s, newest first.                                                 |
-|                         | `useModelContextTools()`               | Live `RegisteredToolInfo[]` from `getTools()` + `toolchange`.                             |
-|                         | `isModelContextAvailable()`            | Feature detection.                                                                        |
-|                         | `NextWebMCPError`                      | `Error` with a stable `code`.                                                             |
-|                         | `navigationTool(options)`              | A `navigate_to` tool from an allowlist of route patterns; pushes after returning.         |
-|                         | `unwrap(result)`                       | `data` of a `ToolActionResult`, or throws its `error` for the agent to read.              |
-| `next-web-mcp/server`   | `toolAction(input, handler, options?)` | Wraps a server action: validates input (and output), resolves to `{ ok, data \| error }`. |
-| `next-web-mcp/form`     | `Form` (default)                       | `next/form` plus the WebMCP attributes; handles `respondWith`.                            |
-| `next-web-mcp/manifest` | `createManifestHandler()`              | GET route handler for `/.well-known/webmcp.json`.                                         |
-|                         | `buildManifest()`                      | The same document as a `WebMCPManifest` object.                                           |
-| `next-web-mcp/devtools` | `<WebMCPDevTools>`                     | Tools / Run / Calls panel. Renders `null` in production.                                  |
+| Import                   | Export                                 | Purpose                                                                                   |
+| ------------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `nextjs-webmcp`          | `tool(def)`                            | Identity helper that infers the input type from the Zod schema.                           |
+|                          | `defineTools(map)`                     | Turns `{ name: tool(...) }` into `ToolDef[]`, filling `name` from keys.                   |
+|                          | `<ModelContext>`                       | Registers `tools` for the lifetime of the mount.                                          |
+|                          | `useToolCalls()`                       | Last 200 `ToolCallRecord`s, newest first.                                                 |
+|                          | `useModelContextTools()`               | Live `RegisteredToolInfo[]` from `getTools()` + `toolchange`.                             |
+|                          | `isModelContextAvailable()`            | Feature detection.                                                                        |
+|                          | `NextWebMCPError`                      | `Error` with a stable `code`.                                                             |
+|                          | `navigationTool(options)`              | A `navigate_to` tool from an allowlist of route patterns; pushes after returning.         |
+|                          | `unwrap(result)`                       | `data` of a `ToolActionResult`, or throws its `error` for the agent to read.              |
+| `nextjs-webmcp/server`   | `toolAction(input, handler, options?)` | Wraps a server action: validates input (and output), resolves to `{ ok, data \| error }`. |
+| `nextjs-webmcp/form`     | `Form` (default)                       | `next/form` plus the WebMCP attributes; handles `respondWith`.                            |
+| `nextjs-webmcp/manifest` | `createManifestHandler()`              | GET route handler for `/.well-known/webmcp.json`.                                         |
+|                          | `buildManifest()`                      | The same document as a `WebMCPManifest` object.                                           |
+| `nextjs-webmcp/devtools` | `<WebMCPDevTools>`                     | Tools / Run / Calls panel. Renders `null` in production.                                  |
 
 `<ModelContext>` props: `tools: ToolDef[]`, `children?`.
 `ToolDef` fields: `name?`, `title?`, `description`, `input`, `annotations?`, `execute`.
 
 ## Spec alignment
 
-Chrome's WebMCP guidance, and where next-web-mcp implements it.
+Chrome's WebMCP guidance, and where nextjs-webmcp implements it.
 
-| Chrome rule                                                                                                      | next-web-mcp                                                                                                                    |
+| Chrome rule                                                                                                      | nextjs-webmcp                                                                                                                   |
 | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `document.modelContext` may be undefined; feature-detect.                                                        | `isModelContextAvailable()`; `<ModelContext>` no-ops with one `console.info`. Nothing touches `document` at module scope.       |
 | Register with `registerTool(tool, { signal })`; abort the signal to unregister.                                  | One `AbortController` per tool; aborted when the tool is removed or changes identity, and on unmount. Navigation never aborts.  |
@@ -269,7 +269,7 @@ Chrome's WebMCP guidance, and where next-web-mcp implements it.
 | Same-name registration replaces the previous tool.                                                               | The `<ModelContext>` whose registration lands last wins (see Route-scoped tools); `TOOL_NAME_DUPLICATE` warning in development. |
 | `getTools()` is alphabetized; `toolchange` fires on changes.                                                     | `useModelContextTools()` and the DevTools **Tools** tab subscribe to both.                                                      |
 | `executeTool()` returns `null` if the tool navigates.                                                            | DevTools **Run** shows "navigated (null)"; docs tell tools to return first, then `router.push`.                                 |
-| Declarative forms: `toolname`, `tooldescription`, `toolautosubmit`; `e.agentInvoked` + `e.respondWith(promise)`. | `next-web-mcp/form` sets the attributes and answers agent submits with the action's result.                                     |
+| Declarative forms: `toolname`, `tooldescription`, `toolautosubmit`; `e.agentInvoked` + `e.respondWith(promise)`. | `nextjs-webmcp/form` sets the attributes and answers agent submits with the action's result.                                    |
 | `toolactivated` / `toolcancel` window events carry `toolName`.                                                   | `Form` sets `data-tool-active` between them for styling.                                                                        |
 | Ask before consequential actions.                                                                                | Do it in the server action, which runs with the user's session.                                                                 |
 
@@ -281,13 +281,13 @@ Chrome's WebMCP guidance, and where next-web-mcp implements it.
 2. **Model Context Tool Inspector** — Google's Chrome extension (linked from the WebMCP docs) lists registered
    tools and lets you call them with JSON arguments. `<WebMCPDevTools />` does the same inside your page.
 3. **ChatGPT desktop browser** — supports WebMCP natively; open the site and ask it to complete a task.
-4. **Without a browser that supports WebMCP** — `<ModelContext>` is a no-op. Use `next-web-mcp/internal`'s
+4. **Without a browser that supports WebMCP** — `<ModelContext>` is a no-op. Use `nextjs-webmcp/internal`'s
    `__resetForTests()` and a fake `document.modelContext` in Vitest (see [`test/`](./test)).
 
 ### Verified against Chrome 150 (2026-09-04)
 
 The library is exercised on the live demo with the origin-trial token, not only against the in-memory fake.
-Four places where Chrome 150 differs from `webmcp-types@0.1.6`, and how `next-web-mcp` handles them:
+Four places where Chrome 150 differs from `webmcp-types@0.1.6`, and how `nextjs-webmcp` handles them:
 
 | Chrome 150 behavior                                                                        | What the library does                                                                                     |
 | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -329,14 +329,14 @@ defined; no runs have been recorded yet, and no numbers appear here until they a
 ## Repository layout
 
 ```
-src/, test/            the next-web-mcp package (root of the repo; tsdown + vitest)
+src/, test/            the nextjs-webmcp package (root of the repo; tsdown + vitest)
 examples/commerce      demo storefront (Next.js App Router, mock provider) — deployed to Vercel
 examples/minimal       smallest possible app: three tools (one from navigationTool), manifest
 docs/                  api.md (reference), EVAL.md (evaluation tasks)
-skills/                agent skill for adopting next-web-mcp in an existing app
+skills/                agent skill for adopting nextjs-webmcp in an existing app
 ```
 
-Examples depend on `"next-web-mcp": "workspace:*"`, which pnpm links to the root package.
+Examples depend on `"nextjs-webmcp": "workspace:*"`, which pnpm links to the root package.
 
 ## Local development
 
@@ -350,7 +350,7 @@ pnpm example:minimal
 pnpm lint               # prettier --check .; pnpm format to fix
 ```
 
-Build the package before running or typechecking the examples; they resolve `next-web-mcp` from `dist/`.
+Build the package before running or typechecking the examples; they resolve `nextjs-webmcp` from `dist/`.
 
 ## Roadmap
 
@@ -363,7 +363,7 @@ Build the package before running or typechecking the examples; they resolve `nex
 
 ## Prior art
 
-- [usewebmcp](https://github.com/topics/webmcp) — React hooks around `registerTool`. next-web-mcp adds route
+- [usewebmcp](https://github.com/topics/webmcp) — React hooks around `registerTool`. nextjs-webmcp adds route
   scoping, server-action execution, `next/form`, DevTools, and the manifest.
 - [webmcp-react](https://github.com/topics/webmcp) — component-level tool registration for React.
 - [MCP-B](https://github.com/topics/mcp) — browser-side MCP servers exposed to extensions.

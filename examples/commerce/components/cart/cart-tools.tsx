@@ -1,7 +1,7 @@
 "use client";
 
-import { ModelContext } from "next-web-mcp";
-import { WebMCPDevTools } from "next-web-mcp/devtools";
+import { ModelContext } from "nextjs-webmcp";
+import { WebMCPDevTools } from "nextjs-webmcp/devtools";
 import { useMemo } from "react";
 import { createRootTools } from "app/tools";
 import { useCart } from "./cart-context";

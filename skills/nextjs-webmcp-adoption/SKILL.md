@@ -1,19 +1,19 @@
 ---
-name: next-web-mcp-adoption
-description: Adopt next-web-mcp in an existing Next.js App Router app. Inventories server actions, picks a tool strategy per route, generates tools.ts files, mounts <ModelContext>, adds the manifest route, and verifies in Chrome. Use when asked to "make this app agent-ready", "add WebMCP tools", or "expose server actions to agents".
+name: nextjs-webmcp-adoption
+description: Adopt nextjs-webmcp in an existing Next.js App Router app. Inventories server actions, picks a tool strategy per route, generates tools.ts files, mounts <ModelContext>, adds the manifest route, and verifies in Chrome. Use when asked to "make this app agent-ready", "add WebMCP tools", or "expose server actions to agents".
 ---
 
-# Adopt next-web-mcp in an existing App Router app
+# Adopt nextjs-webmcp in an existing App Router app
 
 You are turning an existing Next.js App Router app into one that exposes route-scoped WebMCP tools. Work in
 small, verifiable steps and keep the app's current UI untouched. The public API is documented in
-`node_modules/next-web-mcp/README.md` and, in the monorepo, `docs/api.md`; use only exports listed there.
+`node_modules/nextjs-webmcp/README.md` and, in the monorepo, `docs/api.md`; use only exports listed there.
 
 ## Step 0 — Preconditions
 
 - `next >= 15`, `react >= 19`, App Router (`app/` directory). Pages Router is not supported.
 - Zod 4 (`zod ^4`) for `z.toJSONSchema`; upgrade if the app is older.
-- Install: `pnpm add next-web-mcp zod` (or the app's package manager).
+- Install: `pnpm add nextjs-webmcp zod` (or the app's package manager).
 
 ## Step 1 — Inventory server actions and routes
 
@@ -28,12 +28,12 @@ Produce a short table: `route | action | read/write | consequential | navigates`
 
 Chrome's WebMCP guidance distinguishes two APIs. Decide per candidate:
 
-| Situation                                                                             | Use                                                                         |
-| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| An existing `<form>` already does the job with a submit (newsletter, contact, filter) | Declarative: `next-web-mcp/form` `Form` with `toolname` + `tooldescription` |
-| Needs route context, structured JSON input, a computed result, or reads data          | Imperative: `tool()` inside `defineTools` mounted with `<ModelContext>`     |
-| Pure read                                                                             | Imperative with `annotations.readOnlyHint: true`                            |
-| Returns third-party content                                                           | Add `annotations.untrustedContentHint: true`                                |
+| Situation                                                                             | Use                                                                          |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| An existing `<form>` already does the job with a submit (newsletter, contact, filter) | Declarative: `nextjs-webmcp/form` `Form` with `toolname` + `tooldescription` |
+| Needs route context, structured JSON input, a computed result, or reads data          | Imperative: `tool()` inside `defineTools` mounted with `<ModelContext>`      |
+| Pure read                                                                             | Imperative with `annotations.readOnlyHint: true`                             |
+| Returns third-party content                                                           | Add `annotations.untrustedContentHint: true`                                 |
 
 Rules of thumb:
 
@@ -45,7 +45,7 @@ Rules of thumb:
 ## Step 3 — Generate `tools.ts` per segment
 
 For each segment with tools, create `app/<segment>/tools.ts`, and wrap the action it calls with
-`toolAction` from `next-web-mcp/server` so the server validates the same schema again and returns
+`toolAction` from `nextjs-webmcp/server` so the server validates the same schema again and returns
 `{ ok, data | error }` instead of throwing. Keep the schema in a plain module both files import (a
 `"use server"` file may only export async functions):
 
@@ -62,7 +62,7 @@ export const addToCartInput = z.object({
 ```ts
 // app/product/[handle]/actions.ts
 "use server";
-import { toolAction } from "next-web-mcp/server";
+import { toolAction } from "nextjs-webmcp/server";
 import { addToCartInput } from "./schemas";
 
 export const addItem = toolAction(addToCartInput, async ({ variantId, quantity }) =>
@@ -72,7 +72,7 @@ export const addItem = toolAction(addToCartInput, async ({ variantId, quantity }
 
 ```ts
 // app/product/[handle]/tools.ts
-import { defineTools, tool, unwrap } from "next-web-mcp";
+import { defineTools, tool, unwrap } from "nextjs-webmcp";
 import { addItem } from "./actions";
 import { addToCartInput } from "./schemas";
 
@@ -113,7 +113,7 @@ Tool definitions cannot cross the server → client prop boundary. Create a `"us
 
 ```tsx
 "use client";
-import { ModelContext } from "next-web-mcp";
+import { ModelContext } from "nextjs-webmcp";
 import { productTools } from "./tools";
 
 export function ProductTools({ children }: { children: React.ReactNode }) {
@@ -122,11 +122,11 @@ export function ProductTools({ children }: { children: React.ReactNode }) {
 ```
 
 Wrap the segment's children in `layout.tsx` or `page.tsx` with it. In the root layout's wrapper also render
-`<WebMCPDevTools />` from `next-web-mcp/devtools` (it renders `null` in production).
+`<WebMCPDevTools />` from `nextjs-webmcp/devtools` (it renders `null` in production).
 
-For declarative forms, replace `import Form from "next/form"` with `import Form from "next-web-mcp/form"` and
+For declarative forms, replace `import Form from "next/form"` with `import Form from "nextjs-webmcp/form"` and
 add `toolname` and `tooldescription`; give inputs a `toolparamdescription="…"` attribute. The JSX typings
-for these attributes ship with `next-web-mcp/form`, so remove any `declare module "react"` augmentation or
+for these attributes ship with `nextjs-webmcp/form`, so remove any `declare module "react"` augmentation or
 spread cast the app previously needed. `action` accepts a server action that returns data; map its result
 with `respond`.
 
@@ -135,7 +135,7 @@ with `respond`.
 Create `app/.well-known/webmcp.json/route.ts` from the same tool arrays:
 
 ```ts
-import { createManifestHandler } from "next-web-mcp/manifest";
+import { createManifestHandler } from "nextjs-webmcp/manifest";
 import { rootTools } from "@/app/tools";
 import { productTools } from "@/app/product/[handle]/tools";
 
@@ -158,7 +158,7 @@ to `public/`.
    `Invalid input for <name>: …`.
 5. `curl http://localhost:3000/.well-known/webmcp.json` returns `{ "version": 1, "routes": [...] }` with every
    tool you defined.
-6. Check the console: no `[next-web-mcp]` warnings other than an expected `MODEL_CONTEXT_UNAVAILABLE` info in
+6. Check the console: no `[nextjs-webmcp]` warnings other than an expected `MODEL_CONTEXT_UNAVAILABLE` info in
    browsers without WebMCP.
 7. Run `pnpm build` to make sure static pages still prerender.
 

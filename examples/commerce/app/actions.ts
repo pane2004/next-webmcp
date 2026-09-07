@@ -1,6 +1,6 @@
 "use server";
 
-import { toolAction } from "next-web-mcp/server";
+import { toolAction } from "nextjs-webmcp/server";
 import { getProducts } from "lib/shopify";
 import type { Product } from "lib/shopify/types";
 import { newsletterInput, searchProductsInput } from "lib/tool-schemas";

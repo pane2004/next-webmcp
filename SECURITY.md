@@ -8,7 +8,7 @@ public issue. You should receive an acknowledgement within a few days.
 
 ## Threat model in one paragraph
 
-next-web-mcp exposes browser-side tools whose bodies are your server actions, executed in the user's own
+nextjs-webmcp exposes browser-side tools whose bodies are your server actions, executed in the user's own
 session. An agent calling a tool has exactly the permissions of the signed-in user, no more. The library adds
 no network surface, stores nothing, and does not transmit tool definitions anywhere; `document.modelContext` is
 the only integration point.
@@ -33,4 +33,4 @@ the only integration point.
 
 ## Supported versions
 
-Only the latest published `next-web-mcp` release receives fixes.
+Only the latest published `nextjs-webmcp` release receives fixes.

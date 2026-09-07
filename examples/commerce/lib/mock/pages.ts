@@ -20,7 +20,7 @@ const SPECS: PageSpec[] = [
     title: "About",
     bodySummary:
       "A demo storefront showing how Next.js apps expose WebMCP tools to browser agents.",
-    body: `<p>This store is a demo of <strong>next-web-mcp</strong>: a small library that lets a Next.js app register <em>WebMCP</em> tools with the browser's <code>document.modelContext</code>, so an AI agent running in Chrome can search the catalog, pick variants, manage the cart and start checkout by calling typed tools instead of scraping the page.</p>
+    body: `<p>This store is a demo of <strong>nextjs-webmcp</strong>: a small library that lets a Next.js app register <em>WebMCP</em> tools with the browser's <code>document.modelContext</code>, so an AI agent running in Chrome can search the catalog, pick variants, manage the cart and start checkout by calling typed tools instead of scraping the page.</p>
 <p>The catalog is an in-memory mock of Vercel's Acme demo store. No Shopify account is needed: set <code>SHOPIFY_STORE_DOMAIN</code> and <code>SHOPIFY_STOREFRONT_ACCESS_TOKEN</code> to switch to a real store with the same UI.</p>
 <p>Nothing here is for sale, and checkout collects no personal data.</p>`,
   },

@@ -4,8 +4,8 @@ Guidance for coding agents (and humans) working in this repository.
 
 ## Repo map
 
-The `next-web-mcp` package lives at the repository root. Examples are pnpm workspace members that depend on
-`"next-web-mcp": "workspace:*"`.
+The `nextjs-webmcp` package lives at the repository root. Examples are pnpm workspace members that depend on
+`"nextjs-webmcp": "workspace:*"`.
 
 ```
 src/                      the package. index.ts (plain barrel; client modules carry their own "use client"), form.tsx,
@@ -16,7 +16,7 @@ examples/commerce/        demo storefront (vercel/commerce fork): app/, componen
 examples/minimal/         three-tool example on a fresh App Router app
 docs/api.md               API reference (every export, signatures, examples) — read before touching src/
 docs/EVAL.md              evaluation tasks
-skills/next-web-mcp-adoption/  skill for adopting the library in another app
+skills/nextjs-webmcp-adoption/  skill for adopting the library in another app
 .github/workflows/ci.yml  prettier → build → typecheck (package + examples) → test → build commerce (Node 22/24)
 CHANGELOG.md              add a line for every user-visible change
 ```
@@ -28,7 +28,7 @@ pnpm install                     # once (uses the lockfile)
 pnpm build                       # package (tsdown) → dist/
 pnpm test | pnpm test:watch      # vitest
 pnpm typecheck                   # package
-pnpm typecheck:examples          # examples (build the package first; they resolve next-web-mcp from dist/)
+pnpm typecheck:examples          # examples (build the package first; they resolve nextjs-webmcp from dist/)
 pnpm build:examples              # next build for every example
 pnpm example:commerce            # http://localhost:3000, mock mode, no env
 pnpm example:minimal
@@ -72,7 +72,7 @@ Never run `git commit` or `git push` on behalf of a user unless asked. Never del
 1. Pick the segment that owns it (`app/**/layout.tsx` or `page.tsx`). Tools should exist only where they make
    sense; `add_to_cart` belongs on the product page, not the root layout.
 2. Write or reuse a server action in that segment's `actions.ts`, wrapped in `toolAction(schema, handler)`
-   from `next-web-mcp/server` so the server validates the arguments again and returns `{ ok, data | error }`.
+   from `nextjs-webmcp/server` so the server validates the arguments again and returns `{ ok, data | error }`.
    Keep the schema in a plain module both files import (a `"use server"` file exports only functions). The
    action is the tool body.
 3. Add the tool to that segment's `tools.ts` with `defineTools`/`tool`: the shared Zod `input`, a description

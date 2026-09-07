@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineTools, navigationTool, tool, unwrap } from "next-web-mcp";
+import { defineTools, navigationTool, tool, unwrap } from "nextjs-webmcp";
 import { addTodo } from "./actions";
 import { todoInput } from "./todos";
 

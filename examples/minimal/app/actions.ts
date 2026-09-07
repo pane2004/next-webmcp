@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { toolAction } from "next-web-mcp/server";
+import { toolAction } from "nextjs-webmcp/server";
 import { createTodo, todoInput } from "./todos";
 
 /**

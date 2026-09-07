@@ -76,7 +76,7 @@ export function buildManifest(routes: ManifestRoutes): WebMCPManifest {
  * @example
  * ```ts
  * // app/.well-known/webmcp.json/route.ts
- * import { createManifestHandler } from "next-web-mcp/manifest";
+ * import { createManifestHandler } from "nextjs-webmcp/manifest";
  * export const GET = createManifestHandler(async () => ({
  *   "/": rootTools,
  *   "/search": createSearchTools(await getCollections()),

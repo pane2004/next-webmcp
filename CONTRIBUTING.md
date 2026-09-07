@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping. The `next-web-mcp` package lives at the repository root (`src/`, `test/`); the pnpm
+Thanks for helping. The `nextjs-webmcp` package lives at the repository root (`src/`, `test/`); the pnpm
 workspace also holds `examples/commerce` (the demo storefront) and `examples/minimal`.
 
 ## Setup

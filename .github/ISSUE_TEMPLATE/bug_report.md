@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Something in next-web-mcp does not behave as documented
+about: Something in nextjs-webmcp does not behave as documented
 title: ""
 labels: bug
 assignees: ""
@@ -16,8 +16,8 @@ A repo or a `tools.ts` + layout snippet. `examples/minimal` is a good starting p
 
 **Environment**
 
-- next-web-mcp version:
-- Entry point (`next-web-mcp`, `/form`, `/manifest`, `/devtools`):
+- nextjs-webmcp version:
+- Entry point (`nextjs-webmcp`, `/form`, `/manifest`, `/devtools`):
 - next version:
 - react version:
 - zod version:
@@ -26,4 +26,4 @@ A repo or a `tools.ts` + layout snippet. `examples/minimal` is a good starting p
 
 **Console output**
 
-Include any `[next-web-mcp]` messages and the `NextWebMCPError.code` if there is one.
+Include any `[nextjs-webmcp]` messages and the `NextWebMCPError.code` if there is one.

@@ -1,6 +1,6 @@
 "use client";
 
-import { ModelContext } from "next-web-mcp";
+import { ModelContext } from "nextjs-webmcp";
 import { useCart } from "components/cart/cart-context";
 import type { Product } from "lib/shopify/types";
 import { useMemo } from "react";

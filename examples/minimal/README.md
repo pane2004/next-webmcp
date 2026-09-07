@@ -1,16 +1,16 @@
 # example-minimal
 
-The smallest useful next-web-mcp app: a todo list with three tools and a manifest route.
+The smallest useful nextjs-webmcp app: a todo list with three tools and a manifest route.
 
 - `get_time` — read-only, returns an ISO-8601 string.
-- `add_todo` — runs the `addTodo` server action (wrapped in `toolAction` from `next-web-mcp/server`, so
+- `add_todo` — runs the `addTodo` server action (wrapped in `toolAction` from `nextjs-webmcp/server`, so
   the server validates the input again).
 - `navigate_to` — built with `navigationTool`; opens `/` or `/todos/[id]`.
 - `GET /.well-known/webmcp.json` — the manifest, built from the same `tools` array.
 
 ```sh
 pnpm install             # from the repo root
-pnpm build               # builds next-web-mcp into dist/, which this app links to
+pnpm build               # builds nextjs-webmcp into dist/, which this app links to
 pnpm example:minimal     # http://localhost:3000
 ```
 

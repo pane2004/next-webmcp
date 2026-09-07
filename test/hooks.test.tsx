@@ -172,7 +172,7 @@ describe("useModelContextTools() on Chrome 150", () => {
         </ModelContext>,
       );
     });
-    // A tool registered outside next-web-mcp (e.g. a declarative form): only the browser copy exists.
+    // A tool registered outside nextjs-webmcp (e.g. a declarative form): only the browser copy exists.
     await act(async () => {
       await fake.registerTool({
         name: "foreign",

@@ -1,35 +1,35 @@
-# next-web-mcp API reference
+# nextjs-webmcp API reference
 
 Every public export, with its signature, behavior, and an example. For the pitch, the quick start, and the
 spec-alignment table see the [README](../README.md).
 
 ```sh
-pnpm add next-web-mcp zod
+pnpm add nextjs-webmcp zod
 ```
 
 Peers: `next >= 15`, `react >= 19`, `react-dom >= 19`, `zod ^4`. Node 22+.
 
 ## Entry points
 
-| Import                  | Runs in         | Contents                                                                                                         |
-| ----------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `next-web-mcp`          | client + server | `tool`, `defineTools`, `navigationTool`, `unwrap`, `ModelContext`, hooks, `NextWebMCPError`, types               |
-| `next-web-mcp/server`   | server          | `toolAction` — validates a server action's input and output, returns `{ ok, data \| error }`; `ToolActionResult` |
-| `next-web-mcp/form`     | client          | `Form` — `next/form` with the WebMCP attributes and `respondWith`; ships the JSX typings                         |
-| `next-web-mcp/manifest` | server / Node   | `createManifestHandler`, `buildManifest`, manifest types                                                         |
-| `next-web-mcp/devtools` | client, dev     | `WebMCPDevTools`                                                                                                 |
-| `next-web-mcp/internal` | tests           | `__resetForTests`, `registry`                                                                                    |
+| Import                   | Runs in         | Contents                                                                                                         |
+| ------------------------ | --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `nextjs-webmcp`          | client + server | `tool`, `defineTools`, `navigationTool`, `unwrap`, `ModelContext`, hooks, `NextWebMCPError`, types               |
+| `nextjs-webmcp/server`   | server          | `toolAction` — validates a server action's input and output, returns `{ ok, data \| error }`; `ToolActionResult` |
+| `nextjs-webmcp/form`     | client          | `Form` — `next/form` with the WebMCP attributes and `respondWith`; ships the JSX typings                         |
+| `nextjs-webmcp/manifest` | server / Node   | `createManifestHandler`, `buildManifest`, manifest types                                                         |
+| `nextjs-webmcp/devtools` | client, dev     | `WebMCPDevTools`                                                                                                 |
+| `nextjs-webmcp/internal` | tests           | `__resetForTests`, `registry`                                                                                    |
 
-`next-web-mcp/form` and `next-web-mcp/devtools` start with `"use client"`. `next-web-mcp/manifest` and
-`next-web-mcp/server` import no React and can be used from route handlers, server actions, server components,
+`nextjs-webmcp/form` and `nextjs-webmcp/devtools` start with `"use client"`. `nextjs-webmcp/manifest` and
+`nextjs-webmcp/server` import no React and can be used from route handlers, server actions, server components,
 and scripts.
 
-`next-web-mcp` itself is a plain barrel; each `"use client"` file keeps its own directive. So `tool`,
+`nextjs-webmcp` itself is a plain barrel; each `"use client"` file keeps its own directive. So `tool`,
 `defineTools`, `navigationTool`, `unwrap`, `NextWebMCPError` and `isModelContextAvailable` are real functions
 on the server (a `tools.ts` that imports them can be shared between a page and the manifest route handler),
 while `ModelContext` and the hooks stay client references.
 
-## `next-web-mcp`
+## `nextjs-webmcp`
 
 ### `tool(def)`
 
@@ -39,7 +39,7 @@ not in render.
 
 ```ts
 import { z } from "zod";
-import { tool } from "next-web-mcp";
+import { tool } from "nextjs-webmcp";
 
 export const getTime = tool({
   name: "get_time",
@@ -79,7 +79,7 @@ Turns a keyed object into `ToolDef[]`, filling `name` from the key when it is mi
 
 ```ts
 import { z } from "zod";
-import { defineTools, tool } from "next-web-mcp";
+import { defineTools, tool } from "nextjs-webmcp";
 
 export const tools = defineTools({
   get_cart: tool({
@@ -120,7 +120,7 @@ function navigationTool(options: {
 
 ```ts
 import { z } from "zod";
-import { defineTools, navigationTool } from "next-web-mcp";
+import { defineTools, navigationTool } from "nextjs-webmcp";
 
 export const rootTools = defineTools({
   navigate_to: navigationTool({
@@ -184,12 +184,12 @@ route handler.
 
 ### `unwrap(result)`
 
-Returns `result.data` of a [`ToolActionResult`](#next-web-mcpserver), or throws `Error(result.error)`.
+Returns `result.data` of a [`ToolActionResult`](#nextjs-webmcpserver), or throws `Error(result.error)`.
 Inside a tool's `execute` that throw becomes `<name> failed: <error>. Check the page state and try again.`,
 so the agent reads the sentence the server action produced.
 
 ```ts
-import { unwrap } from "next-web-mcp";
+import { unwrap } from "nextjs-webmcp";
 import { searchProducts } from "./actions"; // toolAction(...)
 
 execute: () => async (input) => {
@@ -215,7 +215,7 @@ children and logs one `console.info`.
 
 ```tsx
 "use client";
-import { ModelContext } from "next-web-mcp";
+import { ModelContext } from "nextjs-webmcp";
 import { tools } from "./tools";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -270,7 +270,7 @@ production.
 
 ```tsx
 "use client";
-import { useToolCalls } from "next-web-mcp";
+import { useToolCalls } from "nextjs-webmcp";
 
 export function CallLog() {
   const calls = useToolCalls();
@@ -299,7 +299,7 @@ forms and other registrations do not.
 
 ```tsx
 "use client";
-import { useModelContextTools } from "next-web-mcp";
+import { useModelContextTools } from "nextjs-webmcp";
 
 export function LiveTools() {
   const tools = useModelContextTools();
@@ -322,7 +322,7 @@ export function LiveTools() {
 `true` when `document.modelContext` exists. Always `false` during SSR.
 
 ```ts
-import { isModelContextAvailable } from "next-web-mcp";
+import { isModelContextAvailable } from "nextjs-webmcp";
 
 if (isModelContextAvailable()) {
   // safe to touch document.modelContext
@@ -331,10 +331,10 @@ if (isModelContextAvailable()) {
 
 ### `NextWebMCPError`
 
-`Error` subclass with a stable `code` (`NextWebMCPErrorCode`). Messages are prefixed with `[next-web-mcp]`.
+`Error` subclass with a stable `code` (`NextWebMCPErrorCode`). Messages are prefixed with `[nextjs-webmcp]`.
 
 ```ts
-import { NextWebMCPError } from "next-web-mcp";
+import { NextWebMCPError } from "nextjs-webmcp";
 
 try {
   // ...
@@ -359,7 +359,7 @@ try {
 `RegisteredToolInfo`, `ModelContextProps`, `NavigationRoute`, `ToolActionResult`, `NextWebMCPErrorCode`,
 `AppRouterInstance`, `AnyZodSchema`.
 
-## `next-web-mcp/form`
+## `nextjs-webmcp/form`
 
 ### `Form` (default export)
 
@@ -382,7 +382,7 @@ type ToolFormProps<R = unknown> = Omit<FormProps, "action"> & {
 
 ```tsx
 "use client";
-import Form from "next-web-mcp/form";
+import Form from "nextjs-webmcp/form";
 import { subscribe } from "./actions"; // "use server"; (formData: FormData) => Promise<{ ok: boolean }>
 
 export function NewsletterForm() {
@@ -406,7 +406,7 @@ export function NewsletterForm() {
 
 #### JSX typings
 
-Importing `next-web-mcp/form` augments React's JSX types, so these attributes typecheck in any component of
+Importing `nextjs-webmcp/form` augments React's JSX types, so these attributes typecheck in any component of
 your app — no `declare module "react"` block of your own:
 
 | Element                             | Attributes                                                                        |
@@ -415,13 +415,13 @@ your app — no `declare module "react"` block of your own:
 | `<input>`, `<select>`, `<textarea>` | `toolparamdescription?: string`                                                   |
 
 On a plain `<form>` write `toolautosubmit=""`, not `toolautosubmit` — React drops `true` for custom
-attributes, so the attribute never reaches the DOM. `Form` from `next-web-mcp/form` takes a boolean and sets it
+attributes, so the attribute never reaches the DOM. `Form` from `nextjs-webmcp/form` takes a boolean and sets it
 correctly.
 
 The augmentation is part of `dist/form.d.ts`. If your app already declares the same augmentation, delete it;
 the two would conflict only if the types differ.
 
-## `next-web-mcp/manifest`
+## `nextjs-webmcp/manifest`
 
 Serves a JSON description of the tools each route exposes, built from the same `ToolDef[]` you pass to
 `<ModelContext>`, so the manifest cannot drift from the code.
@@ -453,7 +453,7 @@ tools depend on data; it runs on every request.
 
 ```ts
 // app/.well-known/webmcp.json/route.ts
-import { createManifestHandler } from "next-web-mcp/manifest";
+import { createManifestHandler } from "nextjs-webmcp/manifest";
 import { rootTools } from "@/app/tools";
 import { createProductTools } from "@/app/product/[handle]/tools";
 import { createSearchTools } from "@/app/search/tools";
@@ -494,14 +494,14 @@ on each tool's `input`. Throws `NextWebMCPError` with code `TOOL_NAME_INVALID` i
 (use `defineTools`, which fills names from keys).
 
 ```ts
-import { buildManifest } from "next-web-mcp/manifest";
+import { buildManifest } from "nextjs-webmcp/manifest";
 import { tools } from "@/app/tools";
 
 const manifest = buildManifest({ "/": tools });
 manifest.routes[0]?.tools.map((t) => t.name); // ["search_products", "start_checkout"]
 ```
 
-## `next-web-mcp/server`
+## `nextjs-webmcp/server`
 
 The server side of a tool. Server-safe: no React, no `"use client"`, nothing that reads `document` or
 `window`. Import it from `"use server"` files.
@@ -533,7 +533,7 @@ plain, serializable `ToolActionResult`. The returned async function is the actio
 // app/actions.ts
 "use server";
 import { z } from "zod";
-import { toolAction } from "next-web-mcp/server";
+import { toolAction } from "nextjs-webmcp/server";
 import { searchInput } from "./schemas"; // the tool's input schema, in a plain module
 
 export const searchProducts = toolAction(
@@ -556,7 +556,7 @@ export const addToCart = toolAction(
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `input.safeParseAsync(raw)` fails       | `{ ok: false, error: "Invalid input: <path>: <message>; … Fix the arguments and call again." }` — the same wording `<ModelContext>` uses, `(root)` when an issue has no path (e.g. `Invalid input: (root): Invalid input: expected object, received string. Fix the arguments and call again.`). The handler does not run.                                                                                                                                                                       |
 | The handler throws                      | `console.error(err)`, then `{ ok: false, error: onError?.(err) ?? "The action failed on the server. Try again." }`. The thrown message is never returned by default — Next.js redacts it in production anyway, and a result keeps the wording yours in development too. If `onError` itself throws, that error is logged and the generic sentence is used. A `.transform` or `.refine` body in `input` or `output` that throws a non-Zod error takes the same path, so the action never rejects. |
-| `output` is set and the result fails it | `console.error("[next-web-mcp] toolAction: the handler's result failed the output schema: <path>: <message>; …")`, then `{ ok: false, error: "The server returned an unexpected result." }`.                                                                                                                                                                                                                                                                                                     |
+| `output` is set and the result fails it | `console.error("[nextjs-webmcp] toolAction: the handler's result failed the output schema: <path>: <message>; …")`, then `{ ok: false, error: "The server returned an unexpected result." }`.                                                                                                                                                                                                                                                                                                    |
 | Otherwise                               | `{ ok: true, data }` — the `output`-parsed value when `output` is set, else the handler's return value.                                                                                                                                                                                                                                                                                                                                                                                          |
 
 Defaults and transforms in `input` apply (`safeParseAsync`, so async refinements work too). Because the
@@ -582,13 +582,13 @@ export async function subscribe(formData: FormData): Promise<string> {
 }
 ```
 
-## `next-web-mcp/devtools`
+## `nextjs-webmcp/devtools`
 
 ### `<WebMCPDevTools position? defaultOpen? />`
 
 ```tsx
 "use client";
-import { WebMCPDevTools } from "next-web-mcp/devtools";
+import { WebMCPDevTools } from "nextjs-webmcp/devtools";
 
 export function DevTools() {
   return <WebMCPDevTools position="bottom-right" defaultOpen={false} />;
@@ -603,10 +603,10 @@ export function DevTools() {
 
 Tabs: **Tools** (live list grouped by route, JSON Schema toggle), **Run** (JSON args → `document.modelContext.executeTool`, shows "navigated (null)"
 when the tool navigated), **Calls** (`useToolCalls()`). Returns `null` when `NODE_ENV === "production"`
-unless `force`. Inline styles only, zero dependencies. Override `--next-web-mcp-offset` and
-`--next-web-mcp-z-index` to reposition it.
+unless `force`. Inline styles only, zero dependencies. Override `--nextjs-webmcp-offset` and
+`--nextjs-webmcp-z-index` to reposition it.
 
-## `next-web-mcp/internal`
+## `nextjs-webmcp/internal`
 
 Test-only: `__resetForTests()` clears the registry; `registry.getState()` / `registry.subscribe(cb)` expose
 the store. Not covered by semver.
@@ -614,7 +614,7 @@ the store. Not covered by semver.
 ## FAQ
 
 **Why not a generic React `useWebMCP` hook?**
-Those hooks wrap `registerTool` well. next-web-mcp is specific to Next.js: route `params`, `pathname`,
+Those hooks wrap `registerTool` well. nextjs-webmcp is specific to Next.js: route `params`, `pathname`,
 `searchParams` and `router` arrive in `ctx`; `execute` is meant to call server actions so the tool runs in
 the user's session; `next/form` gets a declarative wrapper with `respondWith` and typed attributes;
 the DevTools panel groups tools by route; and the manifest handler is

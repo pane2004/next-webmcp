@@ -1,5 +1,5 @@
 /**
- * Stable error codes surfaced by next-web-mcp.
+ * Stable error codes surfaced by nextjs-webmcp.
  *
  * @see https://github.com/pane2004/next-webmcp#errors
  */
@@ -9,7 +9,7 @@ export type NextWebMCPErrorCode =
   | "MODEL_CONTEXT_UNAVAILABLE";
 
 /**
- * Error thrown (or logged) by next-web-mcp. Every instance carries a stable `code`
+ * Error thrown (or logged) by nextjs-webmcp. Every instance carries a stable `code`
  * so callers can branch without parsing messages.
  *
  * @example
@@ -28,7 +28,7 @@ export class NextWebMCPError extends Error {
   readonly code: NextWebMCPErrorCode;
 
   constructor(code: NextWebMCPErrorCode, message: string) {
-    super(`[next-web-mcp] ${message}`);
+    super(`[nextjs-webmcp] ${message}`);
     this.name = "NextWebMCPError";
     this.code = code;
   }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineTools, tool, type ToolDef } from "next-web-mcp";
+import { defineTools, tool, type ToolDef } from "nextjs-webmcp";
 import { sorting } from "lib/constants";
 import type { Collection } from "lib/shopify/types";
 import { createUrl } from "lib/utils";

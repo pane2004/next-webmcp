@@ -15,7 +15,7 @@ function agentSubmit(form: HTMLFormElement): {
   return { event, respondWith };
 }
 
-describe("next-web-mcp/form", () => {
+describe("nextjs-webmcp/form", () => {
   it("spreads the WebMCP attributes onto the form element", () => {
     const { container } = render(
       <Form action={async () => {}} toolname="subscribe" tooldescription="Subscribe" toolautosubmit>

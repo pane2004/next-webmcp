@@ -1,5 +1,5 @@
 /*
- * `next-web-mcp/server`: helpers for the server side of a tool. Server-safe by construction:
+ * `nextjs-webmcp/server`: helpers for the server side of a tool. Server-safe by construction:
  * no React, no "use client", nothing that reads `document` or `window`.
  */
 import type { z } from "zod";
@@ -54,13 +54,13 @@ function describeFailure(err: unknown, onError: ((error: unknown) => string) | u
  * - An optional `output` schema checks the handler's result and resolves to
  *   `The server returned an unexpected result.` when it does not match.
  *
- * Pair it with `unwrap()` from `next-web-mcp` inside a tool's `execute`.
+ * Pair it with `unwrap()` from `nextjs-webmcp` inside a tool's `execute`.
  *
  * @example
  * ```ts
  * // app/search/actions.ts
  * "use server";
- * import { toolAction } from "next-web-mcp/server";
+ * import { toolAction } from "nextjs-webmcp/server";
  *
  * export const searchProducts = toolAction(
  *   z.object({ q: z.string().min(1), page: z.number().int().min(1).default(1) }),
@@ -90,7 +90,7 @@ export function toolAction<S extends z.ZodTypeAny, R>(
       const checked = await output.safeParseAsync(result);
       if (!checked.success) {
         console.error(
-          `[next-web-mcp] toolAction: the handler's result failed the output schema: ${formatZodIssues(checked.error.issues)}`,
+          `[nextjs-webmcp] toolAction: the handler's result failed the output schema: ${formatZodIssues(checked.error.issues)}`,
         );
         return { ok: false, error: UNEXPECTED_RESULT };
       }

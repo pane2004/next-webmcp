@@ -156,7 +156,7 @@ export function ModelContext({ tools, children }: ModelContextProps): React.JSX.
     if (!mc) {
       warnOnce(
         "MODEL_CONTEXT_UNAVAILABLE",
-        "[next-web-mcp] document.modelContext is unavailable in this browser; tools will not be registered. Enable WebMCP in Chrome 149+ (chrome://flags/#enable-webmcp-testing) or use Chrome Canary.",
+        "[nextjs-webmcp] document.modelContext is unavailable in this browser; tools will not be registered. Enable WebMCP in Chrome 149+ (chrome://flags/#enable-webmcp-testing) or use Chrome Canary.",
         "info",
       );
       return;
@@ -171,14 +171,14 @@ export function ModelContext({ tools, children }: ModelContextProps): React.JSX.
       if (!name || !TOOL_NAME_PATTERN.test(name)) {
         warnOnce(
           `TOOL_NAME_INVALID:${String(name)}`,
-          `[next-web-mcp] TOOL_NAME_INVALID: tool ${name ? `"${name}"` : "without a name"} was skipped. Use defineTools() or set a valid name.`,
+          `[nextjs-webmcp] TOOL_NAME_INVALID: tool ${name ? `"${name}"` : "without a name"} was skipped. Use defineTools() or set a valid name.`,
         );
         continue;
       }
       if (seen.has(name)) {
         warnOnce(
           `TOOL_NAME_DUPLICATE:${name}`,
-          `[next-web-mcp] TOOL_NAME_DUPLICATE: tool "${name}" appears twice in the same <ModelContext>.`,
+          `[nextjs-webmcp] TOOL_NAME_DUPLICATE: tool "${name}" appears twice in the same <ModelContext>.`,
         );
         continue;
       }
@@ -190,7 +190,7 @@ export function ModelContext({ tools, children }: ModelContextProps): React.JSX.
       } catch (err) {
         warnOnce(
           `SCHEMA:${name}`,
-          `[next-web-mcp] Could not convert input schema for "${name}": ${errorMessage(err)}`,
+          `[nextjs-webmcp] Could not convert input schema for "${name}": ${errorMessage(err)}`,
         );
         continue;
       }
@@ -247,7 +247,7 @@ export function ModelContext({ tools, children }: ModelContextProps): React.JSX.
       // normalise with Promise.resolve and never let a registration failure unmount the tree.
       const onRegisterError = (err: unknown): void => {
         if (isDev())
-          console.warn(`[next-web-mcp] registerTool("${name}") failed: ${errorMessage(err)}`);
+          console.warn(`[nextjs-webmcp] registerTool("${name}") failed: ${errorMessage(err)}`);
       };
       try {
         void Promise.resolve(mc.registerTool(native, { signal: controller.signal })).catch(

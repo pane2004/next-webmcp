@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineTools, tool, type ToolDef } from "next-web-mcp";
+import { defineTools, tool, type ToolDef } from "nextjs-webmcp";
 import { addItem, updateItemQuantity } from "components/cart/actions";
 import { DEFAULT_OPTION } from "lib/constants";
 import type { Product, ProductOption, ProductVariant } from "lib/shopify/types";

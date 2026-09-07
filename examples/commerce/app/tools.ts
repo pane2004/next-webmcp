@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineTools, navigationTool, tool, unwrap, type ToolDef } from "next-web-mcp";
+import { defineTools, navigationTool, tool, unwrap, type ToolDef } from "nextjs-webmcp";
 import { removeItem, updateItemQuantity } from "components/cart/actions";
 import {
   cartLineLabel,
@@ -14,7 +14,7 @@ import { searchProducts } from "./actions";
 /**
  * Builds the tools registered on every page (root layout): catalog search, cart
  * reads and edits, navigation and checkout. The cart tools close over `cartApi`,
- * so rebuild them whenever `useCart()` returns a new value. `next-web-mcp` keys
+ * so rebuild them whenever `useCart()` returns a new value. `nextjs-webmcp` keys
  * registration by tool identity (name, description, schema), so a rebuilt array
  * swaps in the fresh closures without re-registering anything. Product- and
  * search-specific tools live next to their routes.
